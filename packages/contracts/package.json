@@ -1,0 +1,31 @@
+{
+  "name": "@quakeshield/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:amoy": "hardhat run scripts/deploy.ts --network amoy",
+    "verify": "hardhat verify",
+    "clean": "hardhat clean",
+    "lint": "solhint 'contracts/**/*.sol'"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "2",
+    "@nomicfoundation/hardhat-ethers": "3",
+    "@nomicfoundation/hardhat-network-helpers": "1",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "2",
+    "@openzeppelin/contracts": "^5.1.0",
+    "@typechain/ethers-v6": "0.5",
+    "@types/chai": "^4.3.20",
+    "chai": "^4.5.0",
+    "dotenv": "^16.4.7",
+    "hardhat": "^2.22.0",
+    "hardhat-gas-reporter": "1",
+    "solhint": "^5.0.0",
+    "solidity-coverage": "0.8",
+    "typechain": "8",
+    "typescript": "^5.7.0"
+  }
+}
