@@ -7,7 +7,7 @@ config({ path: resolve(__dirname, "../.env") });
 
 export const env = {
   PRIVATE_KEY: process.env.PRIVATE_KEY || "",
-  POLYGON_AMOY_RPC: process.env.POLYGON_AMOY_RPC || "https://rpc-amoy.polygon.technology",
+  POLYGON_AMOY_RPC: process.env.POLYGON_AMOY_RPC || "https://polygon-amoy-bor-rpc.publicnode.com",
   QUAKE_SHIELD_ADDRESS: process.env.QUAKE_SHIELD_ADDRESS || "",
   USDC_ADDRESS: process.env.USDC_ADDRESS || "",
   POLL_INTERVAL_MS: parseInt(process.env.POLL_INTERVAL_MS || "30000", 10),

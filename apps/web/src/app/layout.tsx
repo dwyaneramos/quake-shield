@@ -1,9 +1,18 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import { Providers } from "@/components/providers";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "QuakeShield - Parametric Earthquake Insurance",
-  description: "Automatic earthquake insurance payouts powered by blockchain. No middleman, no delays.",
+  description:
+    "Automatic, on-chain earthquake insurance for New Zealand. Set a trigger, pay a premium, get paid in minutes when GeoNet confirms the shake — no adjusters, no delays.",
 };
 
 export default function RootLayout({
@@ -12,17 +21,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossOrigin=""
-        />
-      </head>
-      <body>
-        {children}
+    <html lang="en" className={inter.variable}>
+      <body className="font-sans antialiased">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
