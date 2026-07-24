@@ -55,7 +55,7 @@ pnpm build                    # Build all packages
 
 ### apps/web/.env.local
 ```
-NEXT_PUBLIC_POLYGON_AMOY_RPC=https://rpc-amoy.polygon.technology
+NEXT_PUBLIC_POLYGON_AMOY_RPC=https://polygon-amoy-bor-rpc.publicnode.com
 NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS=0x...  # After deploy
 NEXT_PUBLIC_MOCK_USDC_ADDRESS=0x...     # After deploy
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=... # Get from cloud.walletconnect.com
@@ -63,7 +63,7 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=... # Get from cloud.walletconnect.com
 
 ### packages/contracts/.env
 ```
-POLYGON_AMOY_RPC_URL=https://rpc-amoy.polygon.technology
+POLYGON_AMOY_RPC_URL=https://polygon-amoy-bor-rpc.publicnode.com
 PRIVATE_KEY=...  # Deployer wallet (never commit)
 POLYGONSCAN_API_KEY=...  # For contract verification
 ```
@@ -71,7 +71,7 @@ POLYGONSCAN_API_KEY=...  # For contract verification
 ### apps/oracle/.env
 ```
 PRIVATE_KEY=...  # Oracle wallet (needs MATIC for gas)
-POLYGON_AMOY_RPC=https://rpc-amoy.polygon.technology
+POLYGON_AMOY_RPC=https://polygon-amoy-bor-rpc.publicnode.com
 QUAKE_SHIELD_ADDRESS=0x...
 USDC_ADDRESS=0x...
 POLL_INTERVAL_MS=30000

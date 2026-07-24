@@ -15,8 +15,8 @@ export interface GeoNetQuake {
 
 // Policy from smart contract
 export interface Policy {
-  id: number;
-  policyholder: string;
+  id: bigint;
+  policyholder: `0x${string}`;
   coverageAmount: bigint;
   premiumPaid: bigint;
   triggerMagnitude: bigint;

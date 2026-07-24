@@ -9,7 +9,7 @@ export const POLYGON_AMOY = {
   },
   rpcUrls: {
     default: {
-      http: ["https://rpc-amoy.polygon.technology"],
+      http: ["https://polygon-amoy-bor-rpc.publicnode.com"],
     },
   },
   blockExplorers: {
