@@ -1,17 +1,32 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("Deploying with account:", deployer.address);
   console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)));
 
-  // Deploy MockUSDC
-  console.log("\n--- Deploying MockUSDC ---");
-  const MockUSDC = await ethers.getContractFactory("MockUSDC");
-  const usdc = await MockUSDC.deploy();
-  await usdc.waitForDeployment();
-  const usdcAddress = await usdc.getAddress();
-  console.log("MockUSDC deployed to:", usdcAddress);
+  // If USDC_ADDRESS_<NETWORK> is set (e.g. a real token like NewMoney's dNZD),
+  // point QuakeShield at that instead of deploying a fresh MockUSDC.
+  const externalTokenAddress = process.env[`USDC_ADDRESS_${network.name.toUpperCase()}`];
+
+  let usdcAddress: string;
+  if (externalTokenAddress) {
+    usdcAddress = externalTokenAddress;
+    console.log("\n--- Using external token ---");
+    console.log("Token:", usdcAddress);
+  } else {
+    console.log("\n--- Deploying MockUSDC ---");
+    const MockUSDC = await ethers.getContractFactory("MockUSDC");
+    const usdc = await MockUSDC.deploy();
+    await usdc.waitForDeployment();
+    usdcAddress = await usdc.getAddress();
+    console.log("MockUSDC deployed to:", usdcAddress);
+
+    console.log("\n--- Minting test USDC ---");
+    const mintAmount = ethers.parseUnits("1000000", 6);
+    await usdc.mint(deployer.address, mintAmount);
+    console.log("Minted 1,000,000 USDC to deployer");
+  }
 
   // Deploy QuakeShield
   console.log("\n--- Deploying QuakeShield ---");
@@ -21,25 +36,28 @@ async function main() {
   const quakeshieldAddress = await quakeshield.getAddress();
   console.log("QuakeShield deployed to:", quakeshieldAddress);
 
-  // Mint test USDC to deployer (1,000,000 USDC)
-  console.log("\n--- Minting test USDC ---");
-  const mintAmount = ethers.parseUnits("1000000", 6);
-  await usdc.mint(deployer.address, mintAmount);
-  console.log("Minted 1,000,000 USDC to deployer");
+  // Deploy EarthquakeMarket, sharing the same token and reading QuakeShield's
+  // recorded quake log for resolution.
+  console.log("\n--- Deploying EarthquakeMarket ---");
+  const EarthquakeMarket = await ethers.getContractFactory("EarthquakeMarket");
+  const earthquakeMarket = await EarthquakeMarket.deploy(usdcAddress, quakeshieldAddress);
+  await earthquakeMarket.waitForDeployment();
+  const earthquakeMarketAddress = await earthquakeMarket.getAddress();
+  console.log("EarthquakeMarket deployed to:", earthquakeMarketAddress);
 
   // Summary
   console.log("\n====================================");
   console.log("  DEPLOYMENT SUMMARY");
   console.log("====================================");
-  console.log("Network: Polygon Amoy (80002)");
-  console.log("MockUSDC:", usdcAddress);
+  console.log(`Network: ${network.name} (${network.config.chainId})`);
+  console.log("Token:", usdcAddress, externalTokenAddress ? "(external)" : "(MockUSDC)");
   console.log("QuakeShield:", quakeshieldAddress);
+  console.log("EarthquakeMarket:", earthquakeMarketAddress);
   console.log("====================================");
   console.log("\nNext steps:");
-  console.log("1. Update apps/web/.env.local with these addresses");
-  console.log("2. Update apps/oracle/.env with these addresses");
-  console.log("3. Mint USDC to oracle wallet for gas");
-  console.log("4. Set oracle address in QuakeShield contract");
+  console.log(`1. Update the root .env with these addresses (the *_${network.name.toUpperCase()} vars)`);
+  console.log("2. Fund the oracle wallet with this chain's native gas token");
+  console.log("3. Set oracle address in QuakeShield contract if using a separate oracle wallet");
 }
 
 main().catch((error) => {

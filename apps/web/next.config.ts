@@ -16,12 +16,13 @@ const X402_STUB_FILES: Record<string, string> = {
 };
 
 const nextConfig: NextConfig = {
+  // Pin the workspace root explicitly: a stray lockfile in the user's home
+  // directory otherwise makes Next.js misdetect it during file tracing.
+  outputFileTracingRoot: path.join(__dirname, "../.."),
   reactStrictMode: true,
   images: {
     remotePatterns: [],
   },
-  // Transpile shared packages from monorepo
-  transpilePackages: ["@quakeshield/shared"],
   turbopack: {
     // Turbopack resolveAlias wants paths relative to the project root.
     resolveAlias: Object.fromEntries(

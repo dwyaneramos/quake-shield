@@ -2,26 +2,20 @@
 
 import { useCallback, useState } from "react";
 import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { MOCK_USDC_ABI, QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
+import { MOCK_USDC_ABI, getContracts } from "@/lib/contracts";
 import { getFriendlyTxErrorMessage } from "@/lib/errors";
+import { useEarthquakeMarketContract } from "./useEarthquakeMarketContract";
 
-export type BuyPolicyStep = "idle" | "approving" | "buying" | "done" | "error";
+export type BuySharesStep = "idle" | "approving" | "buying" | "done" | "error";
 
-export interface BuyPolicyInput {
-  coverageAmount: bigint; // USDC, 6 decimals
-  triggerMagnitude: bigint; // x100
-  centerLat: bigint; // x1e6
-  centerLng: bigint; // x1e6
-  radiusKm: bigint;
-}
-
-/** Buying a policy is two on-chain transactions: approve the premium spend, then buyPolicy. */
-export function useBuyPolicy() {
+/** Buying shares is two on-chain transactions: approve the token spend, then buyYes/buyNo. */
+export function useBuyShares() {
   const { address } = useAccount();
   const chainId = useChainId();
-  const { QUAKESHIELD_ADDRESS, USDC_ADDRESS } = getContracts(chainId);
+  const { USDC_ADDRESS } = getContracts(chainId);
+  const { contract } = useEarthquakeMarketContract();
   const publicClient = usePublicClient();
-  const [step, setStep] = useState<BuyPolicyStep>("idle");
+  const [step, setStep] = useState<BuySharesStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const [buyTxHash, setBuyTxHash] = useState<`0x${string}` | undefined>();
 
@@ -29,30 +23,28 @@ export function useBuyPolicy() {
     address: USDC_ADDRESS as `0x${string}`,
     abi: MOCK_USDC_ABI,
     functionName: "allowance",
-    args: address ? [address, QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
-    query: { enabled: Boolean(address && USDC_ADDRESS) },
+    args: address ? [address, contract.address] : undefined,
+    query: { enabled: Boolean(address && USDC_ADDRESS && contract.address) },
   });
 
   const { writeContractAsync } = useWriteContract();
 
-  const buyPolicy = useCallback(
-    async (input: BuyPolicyInput) => {
+  const buyShares = useCallback(
+    async (marketId: bigint, isYes: boolean, amountIn: bigint) => {
       if (!publicClient) throw new Error("Wallet not connected");
 
       setError(null);
       setBuyTxHash(undefined);
       try {
-        // 1% premium — see QuakeShield.sol buyPolicy()
-        const premium = (input.coverageAmount * 10n) / 1000n;
         const currentAllowance = allowance ?? 0n;
 
-        if (currentAllowance < premium) {
+        if (currentAllowance < amountIn) {
           setStep("approving");
           const approveHash = await writeContractAsync({
             address: USDC_ADDRESS as `0x${string}`,
             abi: MOCK_USDC_ABI,
             functionName: "approve",
-            args: [QUAKESHIELD_ADDRESS as `0x${string}`, premium],
+            args: [contract.address, amountIn],
           });
           await publicClient.waitForTransactionReceipt({ hash: approveHash });
           await refetchAllowance();
@@ -60,10 +52,9 @@ export function useBuyPolicy() {
 
         setStep("buying");
         const hash = await writeContractAsync({
-          address: QUAKESHIELD_ADDRESS as `0x${string}`,
-          abi: QUAKESHIELD_ABI,
-          functionName: "buyPolicy",
-          args: [input.coverageAmount, input.triggerMagnitude, input.centerLat, input.centerLng, input.radiusKm],
+          ...contract,
+          functionName: isYes ? "buyYes" : "buyNo",
+          args: [marketId, amountIn],
         });
         setBuyTxHash(hash);
         await publicClient.waitForTransactionReceipt({ hash });
@@ -75,11 +66,11 @@ export function useBuyPolicy() {
         throw e;
       }
     },
-    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, USDC_ADDRESS]
+    [allowance, publicClient, refetchAllowance, writeContractAsync, contract, USDC_ADDRESS]
   );
 
   return {
-    buyPolicy,
+    buyShares,
     step,
     error,
     isPending: step === "approving" || step === "buying",

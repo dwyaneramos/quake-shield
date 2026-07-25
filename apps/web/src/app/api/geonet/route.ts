@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchRecentQuakes, fetchQuakesByRegion, bboxFromRadius } from "@/lib/geonet";
-import { GEONET } from "@/lib/polygon";
+import { GEONET } from "@/lib/chains";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

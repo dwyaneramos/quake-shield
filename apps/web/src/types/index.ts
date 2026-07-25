@@ -60,6 +60,23 @@ export interface QuakeEvent {
   publicId: string;
 }
 
+// Binary (YES/NO) earthquake prediction market from the EarthquakeMarket contract
+export interface EarthquakeMarket {
+  id: bigint;
+  description: string;
+  centerLat: bigint;
+  centerLng: bigint;
+  radiusKm: bigint;
+  triggerMagnitude: bigint;
+  createdAt: bigint;
+  resolutionTime: bigint;
+  yesReserve: bigint;
+  noReserve: bigint;
+  collateralBalance: bigint;
+  resolved: boolean;
+  outcomeYes: boolean;
+}
+
 // Market resolution result
 export interface MarketResolution {
   resolved: boolean;
@@ -117,4 +134,10 @@ export const SCALE = {
    * Example: 1000000000n -> 1000
    */
   fromUSDC: (scaled: bigint): number => Number(scaled) / 1_000_000,
+
+  /**
+   * Convert a CPMM odds/price value (scaled by 1e18, per getMarketPrice) to a
+   * human fraction. Example: 620000000000000000n -> 0.62
+   */
+  fromOdds: (scaled: bigint): number => Number(scaled) / 1e18,
 };
