@@ -35,7 +35,7 @@ export const env = {
   NETWORK_NAME: network.name,
   QUAKE_SHIELD_ADDRESS: network.quakeShieldAddress,
   USDC_ADDRESS: network.usdcAddress,
-  POLL_INTERVAL_MS: parseInt(process.env.POLL_INTERVAL_MS || "30000", 10),
+  POLL_INTERVAL_MS: parseInt(process.env.POLL_INTERVAL_MS || "60000", 10),
   MIN_MAGITUDE_TO_REPORT: parseInt(process.env.MIN_MAGITUDE_TO_REPORT || "500", 10),
   GEONET_API_URL: process.env.GEONET_API_URL || "https://api.geonet.org.nz",
 } as const;

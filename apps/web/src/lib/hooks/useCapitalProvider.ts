@@ -143,7 +143,7 @@ export function useMyPosition() {
     args: address ? [address] : undefined,
     query: {
       enabled: configured && isConnected && Boolean(address),
-      refetchInterval: 15_000,
+      refetchInterval: 30_000,
     },
   });
 

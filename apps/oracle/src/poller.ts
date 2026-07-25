@@ -10,39 +10,21 @@ const submittedQuakes = new Set<string>();
  */
 async function pollAndRecord(): Promise<void> {
   try {
-    console.log("[Poller] Checking for new earthquakes...");
-
-    const quakes = await fetchRecentQuakes(-1); // All quakes
-    console.log(`[Poller] Found ${quakes.length} quakes`);
+    const quakes = await fetchRecentQuakes(-1);
 
     let newQuakes = 0;
 
     for (const quake of quakes) {
-      // Skip if already submitted this session
-      if (submittedQuakes.has(quake.publicID)) {
-        continue;
-      }
-
-      // Skip if already on-chain
+      if (submittedQuakes.has(quake.publicID)) continue;
       if (await isQuakeRecorded(quake.publicID)) {
         submittedQuakes.add(quake.publicID);
         continue;
       }
 
-      // Skip if below minimum magnitude
       const magnitudeScaled = magnitudeToScaled(quake.magnitude);
-      if (magnitudeScaled < env.MIN_MAGITUDE_TO_REPORT) {
-        console.log(`[Poller] Skipping ${quake.publicID}: magnitude ${quake.magnitude} < ${env.MIN_MAGITUDE_TO_REPORT / 100}`);
-        continue;
-      }
+      if (magnitudeScaled < env.MIN_MAGITUDE_TO_REPORT) continue;
+      if (quake.latitude === undefined || quake.longitude === undefined) continue;
 
-      // Skip if missing coordinates
-      if (quake.latitude === undefined || quake.longitude === undefined) {
-        console.log(`[Poller] Skipping ${quake.publicID}: missing coordinates`);
-        continue;
-      }
-
-      // Record earthquake on chain
       const latScaled = latLngToScaled(quake.latitude);
       const lngScaled = latLngToScaled(quake.longitude);
       const depth = BigInt(Math.round(quake.depth));
@@ -51,15 +33,13 @@ async function pollAndRecord(): Promise<void> {
         await recordEarthquake(magnitudeScaled, latScaled, lngScaled, depth, quake.publicID);
         submittedQuakes.add(quake.publicID);
         newQuakes++;
-        console.log(`[Poller] Recorded earthquake ${quake.publicID} (M${quake.magnitude})`);
+        console.log(`[Poller] Recorded M${quake.magnitude} earthquake ${quake.publicID}`);
       } catch (error) {
         console.error(`[Poller] Failed to record ${quake.publicID}:`, error);
       }
     }
 
-    if (newQuakes === 0) {
-      console.log("[Poller] No new earthquakes to record");
-    } else {
+    if (newQuakes > 0) {
       console.log(`[Poller] Recorded ${newQuakes} new earthquake(s)`);
     }
   } catch (error) {
