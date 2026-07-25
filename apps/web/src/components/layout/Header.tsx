@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAccount } from "wagmi";
 import { Logo } from "@/components/brand/Logo";
 import { ConnectButton } from "@/components/web3/ConnectButton";
+import { isAdminAddress } from "@/lib/admin";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -16,6 +18,10 @@ const NAV_LINKS = [
 
 export function Header() {
   const pathname = usePathname();
+  const { address } = useAccount();
+  const isAdmin = isAdminAddress(address);
+
+  const navLinks = NAV_LINKS.filter((link) => link.href !== "/admin" || isAdmin);
 
   return (
     <header className="bg-white border-b border-ink-100">
@@ -24,7 +30,7 @@ export function Header() {
           <Logo />
         </Link>
         <nav className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map((link) => {
+          {navLinks.map((link) => {
             const active = pathname === link.href;
             return (
               <Link

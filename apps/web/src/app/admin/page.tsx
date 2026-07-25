@@ -12,6 +12,7 @@ import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
 import { NZ_REGIONS, regionsForPoint } from "@quakeshield/shared";
 import { SCALE, formatDNZD } from "@/types";
 import { getExplorerUrl } from "@/lib/chains";
+import { isAdminAddress } from "@/lib/admin";
 import type L from "leaflet";
 
 const AdminSimMap = dynamic(
@@ -56,10 +57,11 @@ interface SimulationResult {
 }
 
 export default function AdminPage() {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const chainId = useChainId();
   const chainConfigured = isChainConfigured(chainId);
   const { openConnectModal } = useConnectModal();
+  const isAdmin = isAdminAddress(address);
 
   const { stats, isLoading: statsLoading, isMock } = usePoolStats();
   const {
@@ -162,6 +164,22 @@ export default function AdminPage() {
       })
       .catch(() => {});
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-ink-50">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+          <h1 className="text-2xl font-bold text-ink-900 mb-2">Access Denied</h1>
+          <p className="text-ink-600 mb-6">
+            {isConnected
+              ? "This wallet is not authorized to view the admin panel."
+              : "Connect the authorized admin wallet to view this page."}
+          </p>
+          {!isConnected && <ConnectButton />}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-ink-50">
