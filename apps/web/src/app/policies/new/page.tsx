@@ -15,7 +15,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Header } from "@/components/layout/Header";
-import {  getContracts, isChainConfigured } from "@/lib/contracts";
+import { getContracts, isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
 import { useMarkets } from "@/lib/hooks/useMarkets";
@@ -25,10 +25,15 @@ import { getExplorerUrl } from "@/lib/chains";
 import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
 import { SCALE } from "@/types";
 
-const MAX_COVERAGE_USDC = 10_000;
+const MAX_COVERAGE_DNZD = 10_000;
 
 const REGIONS = [
-  ...NZ_CITIES.map((c) => ({ label: c.name, id: c.id, lat: c.lat, lng: c.lng })),
+  ...NZ_CITIES.map((c) => ({
+    label: c.name,
+    id: c.id,
+    lat: c.lat,
+    lng: c.lng,
+  })),
   { label: "Custom location", id: "custom", lat: null, lng: null },
 ] as const;
 
@@ -63,7 +68,8 @@ function CityMiniGraph({ cityId }: { cityId: string }) {
 
   const trend = data?.trend ?? [];
   const prob = data?.currentProbability ?? 0;
-  const dataMax = trend.length > 0 ? Math.max(...trend.map((p) => p.probability)) : 0.01;
+  const dataMax =
+    trend.length > 0 ? Math.max(...trend.map((p) => p.probability)) : 0.01;
   const yMax = Math.max(dataMax * 1.3, 0.001);
 
   return (
@@ -82,14 +88,21 @@ function CityMiniGraph({ cityId }: { cityId: string }) {
       </div>
       <div className="px-2 pb-2 h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={trend} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+          <AreaChart
+            data={trend}
+            margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
+          >
             <defs>
               <linearGradient id="buyGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#15805c" stopOpacity={0.2} />
                 <stop offset="100%" stopColor="#15805c" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e9edf3" vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#e9edf3"
+              vertical={false}
+            />
             <XAxis
               dataKey="time"
               stroke="#aab8cc"
@@ -113,7 +126,10 @@ function CityMiniGraph({ cityId }: { cityId: string }) {
                 borderRadius: "8px",
                 fontSize: "12px",
               }}
-              formatter={(value) => [`${Number(value).toFixed(4)}%`, "Probability"]}
+              formatter={(value) => [
+                `${Number(value).toFixed(4)}%`,
+                "Probability",
+              ]}
             />
             <Area
               type="monotone"
@@ -130,7 +146,9 @@ function CityMiniGraph({ cityId }: { cityId: string }) {
       </div>
       <div className="px-6 py-3 bg-ink-50/50 border-t border-ink-100 grid grid-cols-3 gap-4 text-center text-xs">
         <div>
-          <p className="text-ink-900 font-semibold">{data?.recentQuakeCount ?? "--"}</p>
+          <p className="text-ink-900 font-semibold">
+            {data?.recentQuakeCount ?? "--"}
+          </p>
           <p className="text-ink-400">quakes past 30d</p>
         </div>
         <div>
@@ -156,24 +174,31 @@ function MarketPositionCard() {
   const { EARTHQUAKE_MARKET_ADDRESS } = getContracts(chainId);
   const marketsConfigured = Boolean(EARTHQUAKE_MARKET_ADDRESS);
   const { markets, isLoading, refetch } = useMarkets();
-  const { buyShares, step, error, isPending, buyTxHash, reset } = useBuyShares();
+  const { buyShares, step, error, isPending, buyTxHash, reset } =
+    useBuyShares();
 
-  const openMarkets = useMemo(() => markets.filter((m) => !m.resolved), [markets]);
+  const openMarkets = useMemo(
+    () => markets.filter((m) => !m.resolved),
+    [markets],
+  );
 
   const [marketId, setMarketId] = useState<string>("");
   const [side, setSide] = useState<"yes" | "no">("yes");
   const [amount, setAmount] = useState("10");
 
   useEffect(() => {
-    if (!marketId && openMarkets.length > 0) setMarketId(openMarkets[0].id.toString());
+    if (!marketId && openMarkets.length > 0)
+      setMarketId(openMarkets[0].id.toString());
   }, [openMarkets, marketId]);
 
   const market = openMarkets.find((m) => m.id.toString() === marketId);
 
   if (!marketsConfigured) return null;
 
-  const amountIn = SCALE.toUSDC(Number(amount) || 0);
-  const previewShares = market ? previewBuy(market.yesReserve, market.noReserve, amountIn, side === "yes") : 0n;
+  const amountIn = SCALE.toDNZD(Number(amount) || 0);
+  const previewShares = market
+    ? previewBuy(market.yesReserve, market.noReserve, amountIn, side === "yes")
+    : 0n;
   const yesPct = market ? SCALE.fromOdds(market.yesPrice) * 100 : 0;
   const noPct = 100 - yesPct;
 
@@ -188,18 +213,21 @@ function MarketPositionCard() {
     <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 mt-6">
       <h2 className="text-lg font-bold text-ink-900 mb-1">Market Position</h2>
       <p className="text-ink-500 text-sm mb-4">
-        Separately from your policy, bet YES or NO on whether the earthquake happens — a one-off trade,
-        priced by the live market.
+        Separately from your policy, bet YES or NO on whether the earthquake
+        happens — a one-off trade, priced by the live market.
       </p>
 
       {isLoading ? (
         <p className="text-sm text-ink-500">Loading markets…</p>
       ) : openMarkets.length === 0 ? (
-        <p className="text-sm text-ink-500">No open markets on this network yet.</p>
+        <p className="text-sm text-ink-500">
+          No open markets on this network yet.
+        </p>
       ) : step === "done" ? (
         <div>
           <p className="text-sm text-shield-700 mb-1">
-            {side.toUpperCase()} position bought — {SCALE.fromUSDC(previewShares).toLocaleString(undefined, {
+            {side.toUpperCase()} position bought —{" "}
+            {SCALE.fromDNZD(previewShares).toLocaleString(undefined, {
               maximumFractionDigits: 4,
             })}{" "}
             shares.
@@ -214,7 +242,11 @@ function MarketPositionCard() {
               View transaction →
             </a>
           )}
-          <button onClick={reset} type="button" className="text-xs text-ink-400 hover:text-ink-600 block mt-2">
+          <button
+            onClick={reset}
+            type="button"
+            className="text-xs text-ink-400 hover:text-ink-600 block mt-2"
+          >
             Take another position
           </button>
         </div>
@@ -238,11 +270,19 @@ function MarketPositionCard() {
             <>
               <div className="mb-3">
                 <div className="flex h-2 rounded-full overflow-hidden bg-ink-100">
-                  <div className="bg-shield-500" style={{ width: `${yesPct}%` }} />
-                  <div className="bg-quake-400" style={{ width: `${noPct}%` }} />
+                  <div
+                    className="bg-shield-500"
+                    style={{ width: `${yesPct}%` }}
+                  />
+                  <div
+                    className="bg-quake-400"
+                    style={{ width: `${noPct}%` }}
+                  />
                 </div>
                 <div className="flex justify-between text-xs font-medium mt-1">
-                  <span className="text-shield-700">YES {yesPct.toFixed(0)}%</span>
+                  <span className="text-shield-700">
+                    YES {yesPct.toFixed(0)}%
+                  </span>
                   <span className="text-quake-700">NO {noPct.toFixed(0)}%</span>
                 </div>
               </div>
@@ -252,7 +292,9 @@ function MarketPositionCard() {
                   type="button"
                   onClick={() => setSide("yes")}
                   className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                    side === "yes" ? "bg-shield-600 text-white" : "bg-ink-100 text-ink-600"
+                    side === "yes"
+                      ? "bg-shield-600 text-white"
+                      : "bg-ink-100 text-ink-600"
                   }`}
                 >
                   Buy YES (will happen)
@@ -261,14 +303,18 @@ function MarketPositionCard() {
                   type="button"
                   onClick={() => setSide("no")}
                   className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                    side === "no" ? "bg-quake-500 text-white" : "bg-ink-100 text-ink-600"
+                    side === "no"
+                      ? "bg-quake-500 text-white"
+                      : "bg-ink-100 text-ink-600"
                   }`}
                 >
                   Buy NO (won&rsquo;t happen)
                 </button>
               </div>
 
-              <label className="block text-xs font-medium text-ink-500 mb-1">Amount (USDC)</label>
+              <label className="block text-xs font-medium text-ink-500 mb-1">
+                Amount (DNZD)
+              </label>
               <input
                 type="number"
                 min={0}
@@ -280,7 +326,10 @@ function MarketPositionCard() {
               <div className="bg-ink-50 rounded-lg p-3 border border-ink-100 text-sm mb-3 flex justify-between">
                 <span className="text-ink-500">Current payout you may get</span>
                 <span className="font-semibold text-shield-700">
-                  {SCALE.fromUSDC(previewShares).toLocaleString(undefined, { maximumFractionDigits: 4 })} USDC
+                  {SCALE.fromDNZD(previewShares).toLocaleString(undefined, {
+                    maximumFractionDigits: 4,
+                  })}{" "}
+                  DNZD
                 </span>
               </div>
 
@@ -292,7 +341,11 @@ function MarketPositionCard() {
                 disabled={isPending || amountIn <= 0n}
                 className="w-full bg-shield-600 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-shield-700 transition-colors disabled:opacity-50"
               >
-                {step === "approving" ? "Approving…" : step === "buying" ? "Buying…" : `Buy ${side.toUpperCase()} (one-off)`}
+                {step === "approving"
+                  ? "Approving…"
+                  : step === "buying"
+                  ? "Buying…"
+                  : `Buy ${side.toUpperCase()} (one-off)`}
               </button>
             </>
           )}
@@ -316,10 +369,13 @@ function BuyPolicyForm() {
   const chainId = useChainId();
   const chainConfigured = isChainConfigured(chainId);
   const { openConnectModal } = useConnectModal();
-  const { buyPolicy, step, error, isPending, buyTxHash, reset } = useBuyPolicy();
+  const { buyPolicy, step, error, isPending, buyTxHash, reset } =
+    useBuyPolicy();
   const { stats } = usePoolStats();
 
-  const [paymentPlan, setPaymentPlan] = useState<"onetime" | "recurring">("onetime");
+  const [paymentPlan, setPaymentPlan] = useState<"onetime" | "recurring">(
+    "onetime",
+  );
   const [regionIndex, setRegionIndex] = useState(initialIndex);
   const [customLat, setCustomLat] = useState("-41.2865");
   const [customLng, setCustomLng] = useState("174.7762");
@@ -342,10 +398,13 @@ function BuyPolicyForm() {
 
   const validation = useMemo(() => {
     if (coverageNum <= 0) return "Coverage must be greater than 0";
-    if (coverageNum > MAX_COVERAGE_USDC) return `Maximum coverage is ${MAX_COVERAGE_USDC.toLocaleString()} USDC`;
+    if (coverageNum > MAX_COVERAGE_DNZD)
+      return `Maximum coverage is ${MAX_COVERAGE_DNZD.toLocaleString()} DNZD`;
     if (magnitudeNum < 4.0) return "Minimum trigger magnitude is 4.0";
-    if (radiusNum <= 0 || radiusNum > 500) return "Radius must be between 1 and 500km";
-    if (!lat || !lng || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng))) return "Enter a valid latitude/longitude";
+    if (radiusNum <= 0 || radiusNum > 500)
+      return "Radius must be between 1 and 500km";
+    if (!lat || !lng || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng)))
+      return "Enter a valid latitude/longitude";
     return null;
   }, [coverageNum, magnitudeNum, radiusNum, lat, lng]);
 
@@ -354,7 +413,7 @@ function BuyPolicyForm() {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     await buyPolicy({
-      coverageAmount: SCALE.toUSDC(coverageNum),
+      coverageAmount: SCALE.toDNZD(coverageNum),
       triggerMagnitude: SCALE.toMagnitude(magnitudeNum),
       centerLat: SCALE.toLatLng(Number(lat)),
       centerLng: SCALE.toLatLng(Number(lng)),
@@ -365,25 +424,45 @@ function BuyPolicyForm() {
   return (
     <div className="min-h-screen bg-ink-50">
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-ink-900 mb-2">Buy Earthquake Policy</h1>
-        <p className="text-ink-600 mb-8">Set your trigger conditions and coverage amount.</p>
+        <h1 className="text-3xl font-bold text-ink-900 mb-2">
+          Buy Earthquake Policy
+        </h1>
+        <p className="text-ink-600 mb-8">
+          Set your trigger conditions and coverage amount.
+        </p>
 
         {!chainConfigured && (
           <div className="bg-quake-50 border border-quake-200 text-quake-800 rounded-xl p-4 mb-6 text-sm">
-            QuakeShield isn&rsquo;t deployed on this network, so purchases are disabled. Switch networks in
-            your wallet, or set the contract addresses in the root <code>.env</code> to enable buying.
+            QuakeShield isn&rsquo;t deployed on this network, so purchases are
+            disabled. Switch networks in your wallet, or set the contract
+            addresses in the root <code>.env</code> to enable buying.
           </div>
         )}
 
         {step === "done" ? (
           <div className="max-w-xl mx-auto bg-white rounded-xl shadow-sm border border-ink-100 p-8 text-center">
             <div className="w-16 h-16 bg-shield-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-shield-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-8 h-8 text-shield-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-ink-900 mb-2">Policy purchased</h2>
-            <p className="text-ink-600 mb-6">You&rsquo;re covered. You&rsquo;ll be paid automatically if the trigger fires.</p>
+            <h2 className="text-xl font-semibold text-ink-900 mb-2">
+              Policy purchased
+            </h2>
+            <p className="text-ink-600 mb-6">
+              You&rsquo;re covered. You&rsquo;ll be paid automatically if the
+              trigger fires.
+            </p>
             {buyTxHash && (
               <a
                 href={`${getExplorerUrl(chainId)}/tx/${buyTxHash}`}
@@ -395,7 +474,10 @@ function BuyPolicyForm() {
               </a>
             )}
             <div className="flex gap-3 justify-center">
-              <Link href="/dashboard" className="bg-shield-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-shield-700 transition-colors">
+              <Link
+                href="/dashboard"
+                className="bg-shield-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-shield-700 transition-colors"
+              >
                 Go to Dashboard
               </Link>
               <button
@@ -409,191 +491,239 @@ function BuyPolicyForm() {
           </div>
         ) : (
           <div className="grid lg:grid-cols-5 gap-8">
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-ink-100 p-8 h-fit">
-            <form
-              className="space-y-6"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSubmit();
-              }}
-            >
-              {/* Coverage Amount */}
-              <div>
-                <label className="block text-sm font-medium text-ink-700 mb-2">Coverage Amount (USDC)</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={MAX_COVERAGE_USDC}
-                  value={coverage}
-                  onChange={(e) => setCoverage(e.target.value)}
-                  className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-                />
-                <p className="text-sm text-ink-500 mt-1">
-                  Premium: 1% of coverage · Max: {MAX_COVERAGE_USDC.toLocaleString()} USDC
-                </p>
-                {stats && stats.totalActiveCoverage > 0n && (
-                  <p className="text-xs text-ink-400 mt-1">
-                    Pool utilization: {((Number(stats.totalActiveCoverage) / Number(stats.balance)) * 100).toFixed(0)}%
+            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-ink-100 p-8 h-fit">
+              <form
+                className="space-y-6"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSubmit();
+                }}
+              >
+                {/* Coverage Amount */}
+                <div>
+                  <label className="block text-sm font-medium text-ink-700 mb-2">
+                    Coverage Amount (DNZD)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={MAX_COVERAGE_DNZD}
+                    value={coverage}
+                    onChange={(e) => setCoverage(e.target.value)}
+                    className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+                  />
+                  <p className="text-sm text-ink-500 mt-1">
+                    Premium: 1% of coverage · Max:{" "}
+                    {MAX_COVERAGE_DNZD.toLocaleString()} DNZD
+                  </p>
+                  {stats && stats.totalActiveCoverage > 0n && (
+                    <p className="text-xs text-ink-400 mt-1">
+                      Pool utilization:{" "}
+                      {(
+                        (Number(stats.totalActiveCoverage) /
+                          Number(stats.balance)) *
+                        100
+                      ).toFixed(0)}
+                      %
+                    </p>
+                  )}
+                </div>
+
+                {/* Trigger Magnitude */}
+                <div>
+                  <label className="block text-sm font-medium text-ink-700 mb-2">
+                    Minimum Trigger Magnitude
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min={4}
+                    value={magnitude}
+                    onChange={(e) => setMagnitude(e.target.value)}
+                    className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+                  />
+                  <p className="text-sm text-ink-500 mt-1">
+                    Payout triggers when earthquake magnitude meets or exceeds
+                    this value (min 4.0)
+                  </p>
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label className="block text-sm font-medium text-ink-700 mb-2">
+                    Coverage Center
+                  </label>
+                  <select
+                    value={regionIndex}
+                    onChange={(e) => setRegionIndex(Number(e.target.value))}
+                    className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500 mb-3"
+                  >
+                    {REGIONS.map((r, i) => (
+                      <option key={r.label} value={i}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                  {isCustom && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-ink-500 mb-1">
+                          Latitude
+                        </label>
+                        <input
+                          type="number"
+                          step="0.0001"
+                          value={customLat}
+                          onChange={(e) => setCustomLat(e.target.value)}
+                          className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-ink-500 mb-1">
+                          Longitude
+                        </label>
+                        <input
+                          type="number"
+                          step="0.0001"
+                          value={customLng}
+                          onChange={(e) => setCustomLng(e.target.value)}
+                          className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Payment Plan */}
+                <div>
+                  <label className="block text-sm font-medium text-ink-700 mb-2">
+                    Payment Plan
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentPlan("onetime")}
+                      className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
+                        paymentPlan === "onetime"
+                          ? "bg-shield-600 text-white"
+                          : "bg-ink-100 text-ink-600"
+                      }`}
+                    >
+                      One-off
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentPlan("recurring")}
+                      className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
+                        paymentPlan === "recurring"
+                          ? "bg-shield-600 text-white"
+                          : "bg-ink-100 text-ink-600"
+                      }`}
+                    >
+                      Recurring
+                    </button>
+                  </div>
+                  <p className="text-xs text-ink-500 mt-1">
+                    {paymentPlan === "onetime"
+                      ? "Pay the premium once for this coverage period."
+                      : "Premium is paid each coverage period — come back to renew, or approve ahead of time."}
+                  </p>
+                </div>
+
+                {/* Radius */}
+                <div>
+                  <label className="block text-sm font-medium text-ink-700 mb-1.5">
+                    Radius (km)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={500}
+                    value={radius}
+                    onChange={(e) => setRadius(e.target.value)}
+                    className="w-full border border-ink-200 rounded-lg px-3 py-2.5 text-sm text-ink-900 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+                  />
+                </div>
+
+                {/* Summary */}
+                <div className="bg-ink-50 rounded-lg p-4 border border-ink-100 text-sm space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-ink-500">Coverage</span>
+                    <span className="font-medium text-ink-900">
+                      {coverageNum.toLocaleString()} DNZD
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-ink-500">Payout if triggered</span>
+                    <span className="font-semibold text-shield-700">
+                      {coverageNum.toLocaleString()} DNZD
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-ink-500">Premium</span>
+                    <span className="font-medium text-ink-900">
+                      {premium.toLocaleString()} DNZD
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-ink-500">Trigger</span>
+                    <span className="font-medium text-ink-900">
+                      M≥{magnitudeNum.toFixed(1)} · {radiusNum}km
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-ink-500">Location</span>
+                    <span className="font-medium text-ink-900">
+                      {region.label}
+                    </span>
+                  </div>
+                </div>
+
+                {validation && (
+                  <p className="text-sm text-quake-700 bg-quake-50 border border-quake-200 rounded-lg px-3 py-2">
+                    {validation}
                   </p>
                 )}
-              </div>
-
-              {/* Trigger Magnitude */}
-              <div>
-                <label className="block text-sm font-medium text-ink-700 mb-2">Minimum Trigger Magnitude</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min={4}
-                  value={magnitude}
-                  onChange={(e) => setMagnitude(e.target.value)}
-                  className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-                />
-                <p className="text-sm text-ink-500 mt-1">Payout triggers when earthquake magnitude meets or exceeds this value (min 4.0)</p>
-              </div>
-
-              {/* Location */}
-              <div>
-                <label className="block text-sm font-medium text-ink-700 mb-2">Coverage Center</label>
-                <select
-                  value={regionIndex}
-                  onChange={(e) => setRegionIndex(Number(e.target.value))}
-                  className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500 mb-3"
-                >
-                  {REGIONS.map((r, i) => (
-                    <option key={r.label} value={i}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-                {isCustom && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-ink-500 mb-1">Latitude</label>
-                      <input
-                        type="number"
-                        step="0.0001"
-                        value={customLat}
-                        onChange={(e) => setCustomLat(e.target.value)}
-                        className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-ink-500 mb-1">Longitude</label>
-                      <input
-                        type="number"
-                        step="0.0001"
-                        value={customLng}
-                        onChange={(e) => setCustomLng(e.target.value)}
-                        className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-                      />
-                    </div>
-                  </div>
+                {error && (
+                  <p className="text-sm text-quake-700 bg-quake-50 border border-quake-200 rounded-lg px-3 py-2">
+                    {error}
+                  </p>
                 )}
-              </div>
 
-            {/* Payment Plan */}
-            <div>
-              <label className="block text-sm font-medium text-ink-700 mb-2">Payment Plan</label>
-              <div className="flex gap-2">
                 <button
-                  type="button"
-                  onClick={() => setPaymentPlan("onetime")}
-                  className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                    paymentPlan === "onetime" ? "bg-shield-600 text-white" : "bg-ink-100 text-ink-600"
-                  }`}
+                  type="submit"
+                  onClick={(e) => {
+                    if (!isConnected) {
+                      e.preventDefault();
+                      openConnectModal?.();
+                    }
+                  }}
+                  className="w-full bg-shield-600 text-white py-3 rounded-lg font-semibold hover:bg-shield-700 transition-colors"
                 >
-                  One-off
+                  {step === "approving"
+                    ? "Approving DNZD…"
+                    : step === "buying"
+                    ? "Buying policy…"
+                    : paymentPlan === "recurring"
+                    ? "Subscribe to Policy"
+                    : "Buy Policy"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentPlan("recurring")}
-                  className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                    paymentPlan === "recurring" ? "bg-shield-600 text-white" : "bg-ink-100 text-ink-600"
-                  }`}
-                >
-                  Recurring
-                </button>
-              </div>
-              <p className="text-xs text-ink-500 mt-1">
-                {paymentPlan === "onetime"
-                  ? "Pay the premium once for this coverage period."
-                  : "Premium is paid each coverage period — come back to renew, or approve ahead of time."}
-              </p>
+              </form>
             </div>
 
-            {/* Radius */}
-            <div>
-              <label className="block text-sm font-medium text-ink-700 mb-1.5">Radius (km)</label>
-              <input
-                type="number"
-                min={1}
-                max={500}
-                value={radius}
-                onChange={(e) => setRadius(e.target.value)}
-                className="w-full border border-ink-200 rounded-lg px-3 py-2.5 text-sm text-ink-900 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-              />
+            {/* Right: City Data */}
+            <div className="lg:col-span-3">
+              <div className="mb-3">
+                <h2 className="text-lg font-bold text-ink-900">
+                  {isCustom ? "Custom Location" : region.label}
+                </h2>
+                <p className="text-ink-500 text-sm">
+                  Live seismic data for this area
+                </p>
+              </div>
+              <CityMiniGraph cityId={selectedCityId} />
+              <MarketPositionCard />
             </div>
-
-            {/* Summary */}
-            <div className="bg-ink-50 rounded-lg p-4 border border-ink-100 text-sm space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-ink-500">Coverage</span>
-                <span className="font-medium text-ink-900">{coverageNum.toLocaleString()} USDC</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-ink-500">Payout if triggered</span>
-                <span className="font-semibold text-shield-700">{coverageNum.toLocaleString()} USDC</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-ink-500">Premium</span>
-                <span className="font-medium text-ink-900">{premium.toLocaleString()} USDC</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-ink-500">Trigger</span>
-                <span className="font-medium text-ink-900">M≥{magnitudeNum.toFixed(1)} · {radiusNum}km</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-ink-500">Location</span>
-                <span className="font-medium text-ink-900">{region.label}</span>
-              </div>
-            </div>
-
-            {validation && <p className="text-sm text-quake-700 bg-quake-50 border border-quake-200 rounded-lg px-3 py-2">{validation}</p>}
-            {error && <p className="text-sm text-quake-700 bg-quake-50 border border-quake-200 rounded-lg px-3 py-2">{error}</p>}
-
-            <button
-              type="submit"
-              onClick={(e) => {
-                if (!isConnected) {
-                  e.preventDefault();
-                  openConnectModal?.();
-                }
-              }}
-              className="w-full bg-shield-600 text-white py-3 rounded-lg font-semibold hover:bg-shield-700 transition-colors"
-            >
-              {step === "approving"
-                ? "Approving USDC…"
-                : step === "buying"
-                ? "Buying policy…"
-                : paymentPlan === "recurring"
-                ? "Subscribe to Policy"
-                : "Buy Policy"}
-            </button>
-          </form>
-        </div>
-
-        {/* Right: City Data */}
-        <div className="lg:col-span-3">
-          <div className="mb-3">
-            <h2 className="text-lg font-bold text-ink-900">
-              {isCustom ? "Custom Location" : region.label}
-            </h2>
-            <p className="text-ink-500 text-sm">Live seismic data for this area</p>
-          </div>
-            <CityMiniGraph cityId={selectedCityId} />
-            <MarketPositionCard />
-          </div>
           </div>
         )}
       </main>

@@ -20,7 +20,7 @@ export const GEONET = {
   BASE_URL: "https://api.geonet.org.nz",
   QUAKE_ENDPOINT: "/quake",
   MMI_THRESHOLD: 4, // Minimum intensity to fetch
-  POLL_INTERVAL_MS: 30_000,
+  POLL_INTERVAL_MS: 60_000,
 } as const;
 
 // NZ specific constants

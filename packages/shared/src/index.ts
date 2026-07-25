@@ -33,18 +33,18 @@ export function unscaleLatLng(scaled: number): number {
 }
 
 /**
- * Scale USDC amount from human-readable to contract format (×1e6)
+ * Scale DNZD amount from human-readable to contract format (×1e6)
  * Example: 1000 → 1000000000
  */
-export function scaleUSDC(human: number): number {
+export function scaleDNZD(human: number): number {
   return Math.round(human * 1_000_000);
 }
 
 /**
- * Unscale USDC amount from contract format to human-readable
+ * Unscale DNZD amount from contract format to human-readable
  * Example: 1000000000 → 1000
  */
-export function unscaleUSDC(scaled: number): number {
+export function unscaleDNZD(scaled: number): number {
   return scaled / 1_000_000;
 }
 

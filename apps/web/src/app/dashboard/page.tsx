@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAccount, useChainId } from "wagmi";
+import { GEONET } from "@/lib/chains";
 function getMagnitudeLabel(magnitude: number): string {
   const labels: Record<number, string> = {
     0: "Micro",
@@ -156,14 +157,14 @@ export default function DashboardPage() {
                             </p>
                             <p className="text-sm text-ink-500">
                               Coverage{" "}
-                              {SCALE.fromUSDC(
+                              {SCALE.fromDNZD(
                                 policy.coverageAmount,
                               ).toLocaleString()}{" "}
-                              USDC · Premium{" "}
-                              {SCALE.fromUSDC(
+                              DNZD · Premium{" "}
+                              {SCALE.fromDNZD(
                                 policy.premiumPaid,
                               ).toLocaleString()}{" "}
-                              USDC
+                              DNZD
                             </p>
                           </div>
                           <span
@@ -187,7 +188,7 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
-              </>
+            </>
           )}
 
           {/* Pool Stats */}
@@ -200,7 +201,7 @@ export default function DashboardPage() {
                 label="Pool Balance"
                 value={
                   stats
-                    ? `${SCALE.fromUSDC(stats.balance).toLocaleString()} USDC`
+                    ? `${SCALE.fromDNZD(stats.balance).toLocaleString()} DNZD`
                     : "--"
                 }
               />
@@ -208,7 +209,9 @@ export default function DashboardPage() {
                 label="Active Coverage"
                 value={
                   stats
-                    ? `${SCALE.fromUSDC(stats.totalActiveCoverage).toLocaleString()} USDC`
+                    ? `${SCALE.fromDNZD(
+                        stats.totalActiveCoverage,
+                      ).toLocaleString()} DNZD`
                     : "--"
                 }
               />
@@ -220,7 +223,9 @@ export default function DashboardPage() {
                 label="Total Premiums"
                 value={
                   stats
-                    ? `${SCALE.fromUSDC(stats.totalPremiums).toLocaleString()} USDC`
+                    ? `${SCALE.fromDNZD(
+                        stats.totalPremiums,
+                      ).toLocaleString()} DNZD`
                     : "--"
                 }
               />
@@ -228,7 +233,9 @@ export default function DashboardPage() {
                 label="Total Payouts"
                 value={
                   stats
-                    ? `${SCALE.fromUSDC(stats.totalPayouts).toLocaleString()} USDC`
+                    ? `${SCALE.fromDNZD(
+                        stats.totalPayouts,
+                      ).toLocaleString()} DNZD`
                     : "--"
                 }
               />
@@ -238,21 +245,35 @@ export default function DashboardPage() {
                 <div className="flex justify-between text-sm text-ink-600 mb-1">
                   <span>Reserve Ratio</span>
                   <span>
-                    {((Number(stats.balance) / Number(stats.totalActiveCoverage)) * 100).toFixed(0)}%
-                    <span className="text-ink-400 ml-1">(min 150%)</span>
+                    {(
+                      (Number(stats.balance) /
+                        Number(stats.totalActiveCoverage)) *
+                      100
+                    ).toFixed(0)}
+                    %<span className="text-ink-400 ml-1">(min 150%)</span>
                   </span>
                 </div>
                 <div className="w-full bg-ink-100 rounded-full h-2">
                   <div
                     className={`h-2 rounded-full transition-all ${
-                      Number(stats.balance) / Number(stats.totalActiveCoverage) < 1.5
+                      Number(stats.balance) /
+                        Number(stats.totalActiveCoverage) <
+                      1.5
                         ? "bg-red-500"
-                        : Number(stats.balance) / Number(stats.totalActiveCoverage) < 2
-                          ? "bg-yellow-500"
-                          : "bg-shield-500"
+                        : Number(stats.balance) /
+                            Number(stats.totalActiveCoverage) <
+                          2
+                        ? "bg-yellow-500"
+                        : "bg-shield-500"
                     }`}
                     style={{
-                      width: `${Math.min((Number(stats.balance) / Number(stats.totalActiveCoverage)) * 100 / 3, 100)}%`,
+                      width: `${Math.min(
+                        ((Number(stats.balance) /
+                          Number(stats.totalActiveCoverage)) *
+                          100) /
+                          3,
+                        100,
+                      )}%`,
                     }}
                   />
                 </div>
@@ -264,9 +285,7 @@ export default function DashboardPage() {
               </p>
             )}
             {chainConfigured && statsLoading && (
-              <p className="mt-4 text-sm text-ink-500">
-                Loading pool stats…
-              </p>
+              <p className="mt-4 text-sm text-ink-500">Loading pool stats…</p>
             )}
           </div>
 
@@ -277,18 +296,38 @@ export default function DashboardPage() {
               title="Buy Policy"
               description="Get earthquake coverage with custom triggers"
               icon={
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
                 </svg>
               }
             />
             <QuickAction
               href="/providers"
               title="Capital Providers"
-              description="Deposit USDC and earn yield from premiums"
+              description="Deposit DNZD and earn yield from premiums"
               icon={
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               }
             />
@@ -297,8 +336,18 @@ export default function DashboardPage() {
               title="Live Quakes"
               description="Monitor real-time GeoNet earthquake data"
               icon={
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
                 </svg>
               }
             />
@@ -307,8 +356,18 @@ export default function DashboardPage() {
               title="Claims History"
               description="View your past payouts and policy events"
               icon={
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
                 </svg>
               }
             />

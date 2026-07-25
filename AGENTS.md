@@ -5,7 +5,7 @@ Parametric earthquake insurance platform for New Zealand. Smart contracts (deplo
 
 ## Tech Stack
 - **Blockchain:** Multi-chain — Ethereum Sepolia (chainId: 11155111) and Avalanche Fuji C-Chain (chainId: 43113). Same contracts, deployed separately to each.
-- **Token:** Mock USDC (6 decimals) per chain — see `packages/contracts/contracts/mocks/MockUSDC.sol`. A NewMoney dNZD integration is planned on Sepolia (see below).
+- **Token:** Mock dNZD (6 decimals) per chain — see `packages/contracts/contracts/mocks/MockDNZD.sol`. A NewMoney dNZD integration (the real token) is planned on Sepolia (see below).
 - **Smart Contracts:** Solidity 0.8.24 + Hardhat + OpenZeppelin
 - **Frontend:** Next.js 15 (App Router) + React 19 + Tailwind CSS
 - **Web3:** viem + wagmi + RainbowKit (chain switcher lets users pick Sepolia or Fuji)
@@ -70,9 +70,9 @@ NETWORK=sepolia        # Which chain this oracle process targets
 SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 NEXT_PUBLIC_SEPOLIA_RPC=https://ethereum-sepolia-rpc.publicnode.com
 QUAKE_SHIELD_ADDRESS_SEPOLIA=0x...              # After deploy:sepolia
-USDC_ADDRESS_SEPOLIA=0x...
+DNZD_ADDRESS_SEPOLIA=0x...
 NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_SEPOLIA=0x...
-NEXT_PUBLIC_MOCK_USDC_ADDRESS_SEPOLIA=0x...
+NEXT_PUBLIC_DNZD_ADDRESS_SEPOLIA=0x...
 NEXT_PUBLIC_QUAKE_SHIELD_DEPLOY_BLOCK_SEPOLIA=...
 ETHERSCAN_API_KEY=...
 
@@ -80,9 +80,9 @@ ETHERSCAN_API_KEY=...
 FUJI_RPC_URL=https://avalanche-fuji-c-chain-rpc.publicnode.com
 NEXT_PUBLIC_FUJI_RPC=https://avalanche-fuji-c-chain-rpc.publicnode.com
 QUAKE_SHIELD_ADDRESS_FUJI=0x...                 # After deploy:fuji
-USDC_ADDRESS_FUJI=0x...
+DNZD_ADDRESS_FUJI=0x...
 NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_FUJI=0x...
-NEXT_PUBLIC_MOCK_USDC_ADDRESS_FUJI=0x...
+NEXT_PUBLIC_DNZD_ADDRESS_FUJI=0x...
 NEXT_PUBLIC_QUAKE_SHIELD_DEPLOY_BLOCK_FUJI=...
 SNOWTRACE_API_KEY=...
 
@@ -105,7 +105,7 @@ plain var.
 1. **User buys policy** → Frontend calls `buyPolicy()` on QuakeShield.sol, on whichever chain the wallet is connected to
 2. **Oracle polls GeoNet** → Every 30s, checks for new quakes ≥ 5.0 magnitude
 3. **Earthquake detected** → Oracle calls `recordEarthquake()` on the contract for its configured chain
-4. **Automatic payout** → Contract checks all active policies on that chain, transfers USDC if trigger conditions met
+4. **Automatic payout** → Contract checks all active policies on that chain, transfers DNZD if trigger conditions met
 
 Each chain has its own independent pool, policies, and oracle — a quake recorded on Sepolia does not affect the Fuji deployment.
 
@@ -125,7 +125,7 @@ All addresses go in the root `.env`, keyed per chain. Never hardcode in source.
 - Oracle wallet(s) need the matching native gas token per chain, plus the contract needs to recognize them as `oracle` (the deployer is the default oracle — see `setOracle()` if using a separate wallet)
 
 ### NewMoney (dNZD) integration
-QuakeShield plans to use NewMoney's dNZD (NZD-backed stablecoin, getnew.money) instead of MockUSDC on Sepolia. As of the last check, dNZD is Sepolia-testnet-only (mint-only REST API, beta v0.1) — no Fuji/Avalanche support yet. Requires an API key from tech@getnewmoney.io. Once available, swap `NEXT_PUBLIC_MOCK_USDC_ADDRESS_SEPOLIA` for the dNZD token address; the contract itself doesn't care which ERC20 it holds.
+QuakeShield plans to use NewMoney's dNZD (NZD-backed stablecoin, getnew.money) as its token on Sepolia — the "DNZD" naming throughout the codebase already reflects this, but until the real token is wired in, `DNZD_ADDRESS_*`/`NEXT_PUBLIC_DNZD_ADDRESS_*` still point at a `MockDNZD` deployment (see `packages/contracts/contracts/mocks/MockDNZD.sol`), not the actual NewMoney contract. As of the last check, dNZD is Sepolia-testnet-only (mint-only REST API, beta v0.1) — no Fuji/Avalanche support yet. Requires an API key from tech@getnewmoney.io. Once available, swap `NEXT_PUBLIC_DNZD_ADDRESS_SEPOLIA` for the real dNZD token address; the contract itself doesn't care which ERC20 it holds.
 
 ## Conventions
 
@@ -154,9 +154,9 @@ QuakeShield plans to use NewMoney's dNZD (NZD-backed stablecoin, getnew.money) i
 
 1. **Forgetting to scale values:** Magnitude 6.0 must be sent as 600, not 6.0
 2. **Wrong chainId:** Sepolia is 11155111, Fuji is 43113 — don't confuse with mainnets (1, 43114)
-3. **Insufficient gas:** Oracle/deployer wallets need the chain's native token (ETH on Sepolia, AVAX on Fuji), not USDC
+3. **Insufficient gas:** Oracle/deployer wallets need the chain's native token (ETH on Sepolia, AVAX on Fuji), not DNZD
 4. **GeoNet rate limits:** Don't poll faster than 30s
-5. **USDC decimals:** Always use 6 decimals (1 USDC = 1000000)
+5. **DNZD decimals:** Always use 6 decimals (1 DNZD = 1000000)
 6. **Mixing up chains:** Sepolia and Fuji have entirely separate contract deployments, addresses, and pools — a policy bought on one chain does not exist on the other
 
 ## Testing
@@ -170,17 +170,17 @@ pnpm hardhat test --grep "buyPolicy"  # Run specific test
 
 ### Manual Testing Flow
 1. Deploy contracts to Sepolia and/or Fuji
-2. Mint test USDC: `usdc.mint(yourAddress, 100000000)` (100 USDC)
+2. Mint test DNZD: `dnzd.mint(yourAddress, 100000000)` (100 DNZD)
 3. Start frontend, connect wallet, switch to the chain you deployed to
 4. Buy a policy
 5. Start the matching oracle instance, wait for a real earthquake OR manually call `recordEarthquake()` via Hardhat console
 
 ## Deployment Checklist
 - [ ] Fund deployer wallet with Sepolia ETH and/or Fuji AVAX
-- [ ] Deploy MockUSDC + QuakeShield to Sepolia (`pnpm deploy:sepolia`)
-- [ ] Deploy MockUSDC + QuakeShield to Fuji (`pnpm deploy:fuji`)
+- [ ] Deploy MockDNZD + QuakeShield to Sepolia (`pnpm deploy:sepolia`)
+- [ ] Deploy MockDNZD + QuakeShield to Fuji (`pnpm deploy:fuji`)
 - [ ] Verify contracts (Etherscan for Sepolia, Snowtrace for Fuji)
 - [ ] Update the root `.env` with per-chain addresses
-- [ ] Mint test USDC to oracle wallet(s)
+- [ ] Mint test DNZD to oracle wallet(s)
 - [ ] Set oracle address in QuakeShield contract if using a separate oracle wallet per chain
 - [ ] Fund oracle wallet(s) with native gas token

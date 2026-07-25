@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { NZ_CITIES, CITY_RADIUS_KM, type NZCity } from "@/lib/cities";
+import { GEONET } from "@/lib/chains";
 
 interface TrendPoint {
   time: string;
@@ -74,7 +75,7 @@ export default function EarthquakeProbabilityGraph({
 
   useEffect(() => {
     fetchData(selectedCity, minMagnitude);
-    const interval = setInterval(() => fetchData(selectedCity, minMagnitude), 60_000);
+    const interval = setInterval(() => fetchData(selectedCity, minMagnitude), GEONET.POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [selectedCity, minMagnitude, fetchData]);
 
@@ -224,7 +225,7 @@ export default function EarthquakeProbabilityGraph({
               <span className="text-ink-500">High</span>
             </div>
           </div>
-          <p className="text-ink-400">Data from GeoNet &middot; Updated every 60s</p>
+          <p className="text-ink-400">Data from GeoNet &middot; Updated every {GEONET.POLL_INTERVAL_MS / 1000}s</p>
         </div>
       </div>
     </div>

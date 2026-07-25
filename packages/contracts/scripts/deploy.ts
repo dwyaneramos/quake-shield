@@ -5,33 +5,33 @@ async function main() {
   console.log("Deploying with account:", deployer.address);
   console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)));
 
-  // If USDC_ADDRESS_<NETWORK> is set (e.g. a real token like NewMoney's dNZD),
-  // point QuakeShield at that instead of deploying a fresh MockUSDC.
-  const externalTokenAddress = process.env[`USDC_ADDRESS_${network.name.toUpperCase()}`];
+  // If DNZD_ADDRESS_<NETWORK> is set (e.g. NewMoney's real dNZD token),
+  // point QuakeShield at that instead of deploying a fresh MockDNZD.
+  const externalTokenAddress = process.env[`DNZD_ADDRESS_${network.name.toUpperCase()}`];
 
-  let usdcAddress: string;
+  let dnzdAddress: string;
   if (externalTokenAddress) {
-    usdcAddress = externalTokenAddress;
+    dnzdAddress = externalTokenAddress;
     console.log("\n--- Using external token ---");
-    console.log("Token:", usdcAddress);
+    console.log("Token:", dnzdAddress);
   } else {
-    console.log("\n--- Deploying MockUSDC ---");
-    const MockUSDC = await ethers.getContractFactory("MockUSDC");
-    const usdc = await MockUSDC.deploy();
-    await usdc.waitForDeployment();
-    usdcAddress = await usdc.getAddress();
-    console.log("MockUSDC deployed to:", usdcAddress);
+    console.log("\n--- Deploying MockDNZD ---");
+    const MockDNZD = await ethers.getContractFactory("MockDNZD");
+    const dnzd = await MockDNZD.deploy();
+    await dnzd.waitForDeployment();
+    dnzdAddress = await dnzd.getAddress();
+    console.log("MockDNZD deployed to:", dnzdAddress);
 
-    console.log("\n--- Minting test USDC ---");
+    console.log("\n--- Minting test DNZD ---");
     const mintAmount = ethers.parseUnits("1000000", 6);
-    await usdc.mint(deployer.address, mintAmount);
-    console.log("Minted 1,000,000 USDC to deployer");
+    await dnzd.mint(deployer.address, mintAmount);
+    console.log("Minted 1,000,000 DNZD to deployer");
   }
 
   // Deploy QuakeShield
   console.log("\n--- Deploying QuakeShield ---");
   const QuakeShield = await ethers.getContractFactory("QuakeShield");
-  const quakeshield = await QuakeShield.deploy(usdcAddress);
+  const quakeshield = await QuakeShield.deploy(dnzdAddress);
   await quakeshield.waitForDeployment();
   const quakeshieldAddress = await quakeshield.getAddress();
   console.log("QuakeShield deployed to:", quakeshieldAddress);
@@ -40,7 +40,7 @@ async function main() {
   // recorded quake log for resolution.
   console.log("\n--- Deploying EarthquakeMarket ---");
   const EarthquakeMarket = await ethers.getContractFactory("EarthquakeMarket");
-  const earthquakeMarket = await EarthquakeMarket.deploy(usdcAddress, quakeshieldAddress);
+  const earthquakeMarket = await EarthquakeMarket.deploy(dnzdAddress, quakeshieldAddress);
   await earthquakeMarket.waitForDeployment();
   const earthquakeMarketAddress = await earthquakeMarket.getAddress();
   console.log("EarthquakeMarket deployed to:", earthquakeMarketAddress);
@@ -50,7 +50,7 @@ async function main() {
   console.log("  DEPLOYMENT SUMMARY");
   console.log("====================================");
   console.log(`Network: ${network.name} (${network.config.chainId})`);
-  console.log("Token:", usdcAddress, externalTokenAddress ? "(external)" : "(MockUSDC)");
+  console.log("Token:", dnzdAddress, externalTokenAddress ? "(external)" : "(MockDNZD)");
   console.log("QuakeShield:", quakeshieldAddress);
   console.log("EarthquakeMarket:", earthquakeMarketAddress);
   console.log("====================================");

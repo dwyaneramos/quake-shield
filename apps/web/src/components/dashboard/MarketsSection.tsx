@@ -30,7 +30,7 @@ function MarketBuyCard({ market, onTraded }: { market: ReturnType<typeof useMark
   const yesPct = SCALE.fromOdds(market.yesPrice) * 100;
   const noPct = 100 - yesPct;
   const magnitude = SCALE.fromMagnitude(market.triggerMagnitude);
-  const amountIn = SCALE.toUSDC(Number(amount) || 0);
+  const amountIn = SCALE.toDNZD(Number(amount) || 0);
   const marketClosed = market.resolved || Date.now() / 1000 >= Number(market.resolutionTime);
 
   const handleBuy = async () => {

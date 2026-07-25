@@ -8,7 +8,7 @@ export const QUAKESHIELD_ABI = [
     "inputs": [
       {
         "internalType": "address",
-        "name": "_usdc",
+        "name": "_dnzd",
         "type": "address"
       }
     ],
@@ -837,7 +837,7 @@ export const QUAKESHIELD_ABI = [
   },
   {
     "inputs": [],
-    "name": "usdc",
+    "name": "dnzd",
     "outputs": [
       {
         "internalType": "contract IERC20",
@@ -885,7 +885,7 @@ export const QUAKESHIELD_ABI = [
   }
 ] as const;
 
-export const MOCK_USDC_ABI = [
+export const MOCK_DNZD_ABI = [
   {
     "inputs": [],
     "stateMutability": "nonpayable",
@@ -1410,11 +1410,11 @@ export const EARTHQUAKE_MARKET_ABI = [
 ] as const;
 
 // Contract addresses are per-chain — QuakeShield is deployed separately to
-// Sepolia and Fuji, so there's a distinct MockUSDC/QuakeShield pair on each.
+// Sepolia and Fuji, so there's a distinct MockDNZD/QuakeShield pair on each.
 // Set after deployment in the root .env.
 export interface ChainContracts {
   QUAKESHIELD_ADDRESS: `0x${string}` | "";
-  USDC_ADDRESS: `0x${string}` | "";
+  DNZD_ADDRESS: `0x${string}` | "";
   DEPLOY_BLOCK: bigint;
   EARTHQUAKE_MARKET_ADDRESS: `0x${string}` | "";
   EARTHQUAKE_MARKET_DEPLOY_BLOCK: bigint;
@@ -1423,14 +1423,14 @@ export interface ChainContracts {
 export const CONTRACTS_BY_CHAIN: Record<number, ChainContracts> = {
   [sepolia.id]: {
     QUAKESHIELD_ADDRESS: (process.env.NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
-    USDC_ADDRESS: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
+    DNZD_ADDRESS: (process.env.NEXT_PUBLIC_DNZD_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
     DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_QUAKE_SHIELD_DEPLOY_BLOCK_SEPOLIA || "0"),
     EARTHQUAKE_MARKET_ADDRESS: (process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
     EARTHQUAKE_MARKET_DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_DEPLOY_BLOCK_SEPOLIA || "0"),
   },
   [avalancheFuji.id]: {
     QUAKESHIELD_ADDRESS: (process.env.NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_FUJI || "") as `0x${string}` | "",
-    USDC_ADDRESS: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_FUJI || "") as `0x${string}` | "",
+    DNZD_ADDRESS: (process.env.NEXT_PUBLIC_DNZD_ADDRESS_FUJI || "") as `0x${string}` | "",
     DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_QUAKE_SHIELD_DEPLOY_BLOCK_FUJI || "0"),
     EARTHQUAKE_MARKET_ADDRESS: (process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_ADDRESS_FUJI || "") as `0x${string}` | "",
     EARTHQUAKE_MARKET_DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_DEPLOY_BLOCK_FUJI || "0"),
@@ -1439,7 +1439,7 @@ export const CONTRACTS_BY_CHAIN: Record<number, ChainContracts> = {
 
 const EMPTY_CONTRACTS: ChainContracts = {
   QUAKESHIELD_ADDRESS: "",
-  USDC_ADDRESS: "",
+  DNZD_ADDRESS: "",
   DEPLOY_BLOCK: 0n,
   EARTHQUAKE_MARKET_ADDRESS: "",
   EARTHQUAKE_MARKET_DEPLOY_BLOCK: 0n,
@@ -1451,5 +1451,5 @@ export function getContracts(chainId: number | undefined): ChainContracts {
 
 export function isChainConfigured(chainId: number | undefined): boolean {
   const contracts = getContracts(chainId);
-  return Boolean(contracts.QUAKESHIELD_ADDRESS && contracts.USDC_ADDRESS);
+  return Boolean(contracts.QUAKESHIELD_ADDRESS && contracts.DNZD_ADDRESS);
 }
