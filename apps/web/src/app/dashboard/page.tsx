@@ -37,33 +37,47 @@ export default function DashboardPage() {
   const [magnitudeThreshold, setMagnitudeThreshold] = useState(5);
 
   return (
-    <div className="min-h-screen bg-white">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="max-w-6xl mx-auto">
-          {/* Seismic Graph + Settings Panel + City Widgets */}
-          <HomeClient
-            minMagnitude={magnitudeThreshold}
-            settingsPanel={
-              <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 lg:sticky lg:top-6">
-                <h2 className="text-sm font-semibold text-ink-900 mb-4">
-                  Dashboard Settings
-                </h2>
-                <MagnitudeSlider
-                  value={magnitudeThreshold}
-                  onChange={setMagnitudeThreshold}
-                />
-              </div>
-            }
-          />
-
-          {/* Live Quake Feed */}
-          <div className="mt-6">
-            <DashboardQuakeFeed threshold={magnitudeThreshold} />
+    <div className="min-h-screen bg-ink-50">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-ink-900">Dashboard</h1>
+            <p className="text-ink-600 mt-1">
+              Live seismic risk, your coverage, and the pool backing it.
+            </p>
           </div>
+          <Link
+            href="/policies/new"
+            className="inline-flex items-center justify-center bg-shield-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-shield-700 transition-colors text-sm shrink-0"
+          >
+            + Buy Policy
+          </Link>
+        </div>
+
+        {/* Seismic Graph + Settings Panel + City Widgets */}
+        <HomeClient
+          minMagnitude={magnitudeThreshold}
+          settingsPanel={
+            <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 lg:sticky lg:top-6">
+              <h2 className="text-sm font-semibold text-ink-900 mb-4">
+                Dashboard Settings
+              </h2>
+              <MagnitudeSlider
+                value={magnitudeThreshold}
+                onChange={setMagnitudeThreshold}
+              />
+            </div>
+          }
+        />
+
+        {/* Live Quake Feed */}
+        <div className="mt-6">
+          <DashboardQuakeFeed threshold={magnitudeThreshold} />
         </div>
 
         {/* Wallet Section */}
-        <div className="mt-12 max-w-5xl mx-auto">
+        <div className="mt-10">
           {!chainConfigured && (
             <div className="bg-quake-50 border border-quake-200 text-quake-800 rounded-xl p-4 mb-6 text-sm">
               QuakeShield isn&rsquo;t deployed on this network yet — switch
@@ -85,7 +99,7 @@ export default function DashboardPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                   />
                 </svg>
               </div>
@@ -109,10 +123,10 @@ export default function DashboardPage() {
                     Your Policies
                   </h2>
                   <Link
-                    href="/policies/new"
+                    href="/policies"
                     className="text-sm font-semibold text-shield-600 hover:text-shield-700"
                   >
-                    + Buy Policy
+                    View all →
                   </Link>
                 </div>
                 {policiesLoading ? (
@@ -201,7 +215,7 @@ export default function DashboardPage() {
             <h2 className="text-xl font-semibold text-ink-900 mb-4">
               Insurance Pool
             </h2>
-            <div className="grid md:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               <StatCard
                 label="Pool Balance"
                 value={
@@ -291,11 +305,12 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid md:grid-cols-4 gap-6 mt-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
             <QuickAction
               href="/policies/new"
               title="Buy Policy"
               description="Get earthquake coverage with custom triggers"
+              accent="shield"
               icon={
                 <svg
                   className="w-6 h-6"
@@ -316,6 +331,7 @@ export default function DashboardPage() {
               href="/investments"
               title="Invest in a Region"
               description="Back a region against quakes and earn fortnightly returns"
+              accent="quake"
               icon={
                 <svg
                   className="w-6 h-6"
@@ -336,6 +352,7 @@ export default function DashboardPage() {
               href="/quakes"
               title="Live Quakes"
               description="Monitor real-time GeoNet earthquake data"
+              accent="shield"
               icon={
                 <svg
                   className="w-6 h-6"
@@ -356,6 +373,7 @@ export default function DashboardPage() {
               href="/claims"
               title="Claims History"
               description="View your past payouts and policy events"
+              accent="quake"
               icon={
                 <svg
                   className="w-6 h-6"
@@ -389,7 +407,7 @@ function StatCard({
   isLoading?: boolean;
 }) {
   return (
-    <div className="text-center p-4 bg-ink-50 rounded-lg min-w-0">
+    <div className="text-center p-4 bg-ink-50 rounded-xl min-w-0">
       {isLoading ? (
         <Skeleton className="h-8 w-20 mx-auto" />
       ) : (
@@ -400,23 +418,30 @@ function StatCard({
   );
 }
 
+const ACCENTS = {
+  shield: "bg-shield-100 text-shield-600",
+  quake: "bg-quake-100 text-quake-600",
+} as const;
+
 function QuickAction({
   href,
   title,
   description,
   icon,
+  accent = "shield",
 }: {
   href: string;
   title: string;
   description: string;
   icon: React.ReactNode;
+  accent?: keyof typeof ACCENTS;
 }) {
   return (
     <Link
       href={href}
-      className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 hover:shadow-md transition-shadow"
+      className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 hover:shadow-md hover:border-shield-300 transition-all"
     >
-      <div className="w-12 h-12 bg-shield-100 text-shield-600 rounded-lg flex items-center justify-center mb-4">
+      <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${ACCENTS[accent]}`}>
         {icon}
       </div>
       <h3 className="font-semibold text-ink-900 mb-1">{title}</h3>

@@ -43,11 +43,11 @@ export default function CityWidgets({
   }, []);
 
   return (
-    <div className="w-full max-w-5xl mx-auto mt-6">
+    <div className="w-full mt-6">
       <p className="text-ink-500 text-xs font-medium uppercase tracking-wider mb-3">
         Other Cities
       </p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
         {NZ_CITIES.filter((c) => c.id !== selectedCity).map((city) => {
           const w = widgets.find((x) => x.city.id === city.id);
           const prob = w?.currentProbability ?? 0;

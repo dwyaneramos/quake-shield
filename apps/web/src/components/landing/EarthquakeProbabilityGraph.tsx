@@ -89,7 +89,7 @@ export default function EarthquakeProbabilityGraph({
   const yMax = Math.max(dataMax * 1.3, 0.001);
 
   return (
-    <div className={`w-full mx-auto ${settingsPanel ? "max-w-6xl" : "max-w-5xl"}`}>
+    <div className="w-full">
       {/* City Selector */}
       <div className="flex items-center justify-between mb-6">
         <div>
