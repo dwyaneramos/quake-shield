@@ -119,7 +119,7 @@ export async function GET(request: Request) {
 
   try {
     const quakes = await fetchRecentQuakes(1);
-    const result = buildCityResponse(quakes, city);
+    const result = buildCityResponse(quakes, city, minMagnitude);
     const trend = buildTrendData(quakes, city, minMagnitude);
 
     const nearby = quakes.filter((q: any) => {
