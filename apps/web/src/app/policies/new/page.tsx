@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useEffect, Suspense, useCallback } from "react";
 import { useAccount, useChainId } from "wagmi";
@@ -14,12 +15,22 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { Header } from "@/components/layout/Header";
 import { isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
 import { getExplorerUrl } from "@/lib/chains";
 import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
+import { getRegionForCity, getNearestRegion } from "@/lib/nzRegions";
 import { SCALE } from "@/types";
+
+const RegionMap = dynamic(
+  () => import("@/components/policies/RegionMap").then((mod) => mod.RegionMap),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
 
 const MAX_COVERAGE_DNZD = 10_000;
 
@@ -197,6 +208,11 @@ function BuyPolicyForm() {
   const lat = isCustom ? customLat : String(region.lat);
   const lng = isCustom ? customLng : String(region.lng);
   const selectedCityId = isCustom ? "wellington" : region.id;
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+  const nzRegion = isCustom
+    ? getNearestRegion(latNum, lngNum)
+    : getRegionForCity(region.id);
 
   const coverageNum = Number(coverage) || 0;
   const magnitudeNum = Number(magnitude) || 0;
@@ -529,6 +545,25 @@ function BuyPolicyForm() {
                 </p>
               </div>
               <CityMiniGraph cityId={selectedCityId} />
+              {nzRegion && (
+                <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 mt-6">
+                  <h2 className="text-lg font-bold text-ink-900 mb-1">
+                    {nzRegion.name}
+                  </h2>
+                  <p className="text-ink-500 text-sm mb-4">
+                    Your coverage is centered here. The highlighted area shows
+                    the wider NZ region your pinpoint falls in.
+                  </p>
+                  <div className="rounded-lg overflow-hidden border border-ink-100">
+                    <RegionMap
+                      region={nzRegion}
+                      markerLat={latNum}
+                      markerLng={lngNum}
+                      markerLabel={isCustom ? "Custom location" : region.label}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

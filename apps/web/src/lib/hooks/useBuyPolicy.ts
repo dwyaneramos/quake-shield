@@ -20,6 +20,7 @@ export function useBuyPolicy() {
   const { address } = useAccount();
   const chainId = useChainId();
   const { QUAKESHIELD_ADDRESS, DNZD_ADDRESS } = getContracts(chainId);
+  const { QUAKESHIELD_ADDRESS, DNZD_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
   const [step, setStep] = useState<BuyPolicyStep>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export function useBuyPolicy() {
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: DNZD_ADDRESS as `0x${string}`,
-    abi: DNZD_ABI,
+    abi: MOCK_USDC_ABI,
     functionName: "allowance",
     args: address ? [address, QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
     query: { enabled: Boolean(address && DNZD_ADDRESS) },
@@ -50,7 +51,7 @@ export function useBuyPolicy() {
           setStep("approving");
           const approveHash = await writeContractAsync({
             address: DNZD_ADDRESS as `0x${string}`,
-            abi: DNZD_ABI,
+            abi: MOCK_USDC_ABI,
             functionName: "approve",
             args: [QUAKESHIELD_ADDRESS as `0x${string}`, premium],
           });

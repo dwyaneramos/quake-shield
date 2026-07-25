@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: "/policies", label: "Policies & Claims" },
   { href: "/policies/new", label: "Buy Policy" },
   { href: "/investments", label: "Investments" },
+  { href: "/admin", label: "Admin" },
 ];
 
 export function Header() {
