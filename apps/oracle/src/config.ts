@@ -12,12 +12,14 @@ const NETWORKS = {
     rpcUrl: process.env.SEPOLIA_RPC_URL || "",
     quakeShieldAddress: process.env.QUAKE_SHIELD_ADDRESS_SEPOLIA || "",
     usdcAddress: process.env.USDC_ADDRESS_SEPOLIA || "",
+    earthquakeMarketAddress: process.env.EARTHQUAKE_MARKET_ADDRESS_SEPOLIA || "",
   },
   fuji: {
     name: "Avalanche Fuji",
     rpcUrl: process.env.FUJI_RPC_URL || "",
     quakeShieldAddress: process.env.QUAKE_SHIELD_ADDRESS_FUJI || "",
     usdcAddress: process.env.USDC_ADDRESS_FUJI || "",
+    earthquakeMarketAddress: process.env.EARTHQUAKE_MARKET_ADDRESS_FUJI || "",
   },
 } as const;
 
@@ -35,6 +37,8 @@ export const env = {
   NETWORK_NAME: network.name,
   QUAKE_SHIELD_ADDRESS: network.quakeShieldAddress,
   USDC_ADDRESS: network.usdcAddress,
+  // Optional — EarthquakeMarket may not be deployed to every chain yet.
+  EARTHQUAKE_MARKET_ADDRESS: network.earthquakeMarketAddress,
   POLL_INTERVAL_MS: parseInt(process.env.POLL_INTERVAL_MS || "60000", 10),
   MIN_MAGITUDE_TO_REPORT: parseInt(process.env.MIN_MAGITUDE_TO_REPORT || "500", 10),
   GEONET_API_URL: process.env.GEONET_API_URL || "https://api.geonet.org.nz",

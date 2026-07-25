@@ -1,5 +1,11 @@
 import { fetchRecentQuakes, magnitudeToScaled, latLngToScaled, resolveMarket, type MarketCriteria } from "./geonet.js";
-import { recordEarthquake, isQuakeRecorded } from "./signer.js";
+import {
+  recordEarthquake,
+  isQuakeRecorded,
+  getRecordedQuakes,
+  getUnresolvedMarkets,
+  submitMarketResolution,
+} from "./signer.js";
 import { env } from "./config.js";
 
 // Track submitted quakes in memory (for current session)
@@ -77,14 +83,68 @@ export async function resolveMarkets(markets: MarketCriteria[]): Promise<void> {
 }
 
 /**
+ * Mirrors EarthquakeMarket.sol's simplified (non-Haversine) MVP distance
+ * check exactly, in BigInt, so this pre-check agrees with what the on-chain
+ * resolveMarket() call will itself verify.
+ */
+function approxDistanceKmSquared(latDiff: bigint, lngDiff: bigint): bigint {
+  const kmPerDegLat = 111000000n;
+  const kmPerDegLng = 83000000n;
+  const distLat = (latDiff * kmPerDegLat) / 1000000000000n;
+  const distLng = (lngDiff * kmPerDegLng) / 1000000000000n;
+  return distLat * distLat + distLng * distLng;
+}
+
+/**
+ * Resolve EarthquakeMarket markets directly against QuakeShield's recorded
+ * quake log on this chain — one source of truth, no second oracle submission
+ * path. A market resolves YES as soon as a matching quake is found, or NO
+ * once its resolutionTime has passed with nothing matching.
+ */
+export async function checkAndResolveMarkets(): Promise<void> {
+  const markets = await getUnresolvedMarkets();
+  if (markets.length === 0) return;
+
+  console.log(`[Resolver] Checking ${markets.length} unresolved market(s)...`);
+  const quakes = await getRecordedQuakes();
+  const nowSec = BigInt(Math.floor(Date.now() / 1000));
+
+  for (const market of markets) {
+    const radiusSq = market.radiusKm * market.radiusKm;
+    const qualifying = quakes.find(
+      (q) =>
+        q.magnitude >= market.triggerMagnitude &&
+        q.timestamp >= market.createdAt &&
+        q.timestamp <= market.resolutionTime &&
+        approxDistanceKmSquared(market.centerLat - q.latitude, market.centerLng - q.longitude) <= radiusSq
+    );
+
+    try {
+      if (qualifying) {
+        await submitMarketResolution(market.id, true);
+      } else if (nowSec >= market.resolutionTime) {
+        await submitMarketResolution(market.id, false);
+      }
+    } catch (error) {
+      console.error(`[Resolver] Failed to resolve market ${market.id}:`, error);
+    }
+  }
+}
+
+/**
  * Start the polling loop
  */
 export function startPolling(): void {
   console.log(`[Poller] Starting earthquake recording every ${env.POLL_INTERVAL_MS / 1000}s`);
 
+  const tick = async () => {
+    await pollAndRecord();
+    await checkAndResolveMarkets();
+  };
+
   // Initial poll
-  pollAndRecord();
+  tick();
 
   // Recurring poll
-  setInterval(pollAndRecord, env.POLL_INTERVAL_MS);
+  setInterval(tick, env.POLL_INTERVAL_MS);
 }
