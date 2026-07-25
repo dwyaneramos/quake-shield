@@ -60,7 +60,7 @@ export default function AdminPage() {
   const chainConfigured = isChainConfigured(chainId);
   const { openConnectModal } = useConnectModal();
 
-  const { stats, isLoading: statsLoading } = usePoolStats();
+  const { stats, isLoading: statsLoading, isMock } = usePoolStats();
   const {
     simulateEarthquake,
     step,
@@ -179,7 +179,9 @@ export default function AdminPage() {
         {/* ── Pool Health ──────────────────────────────────────────────── */}
         <section className="bg-white rounded-2xl border border-ink-100 shadow-sm mb-8">
           <div className="px-6 py-4 border-b border-ink-100">
-            <h2 className="text-lg font-semibold text-ink-900">Pool Health</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-ink-900">Pool Health</h2>
+            </div>
           </div>
           <div className="p-6">
             {statsLoading ? (

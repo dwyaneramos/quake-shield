@@ -28,6 +28,7 @@ export function usePoolStats() {
     query: { enabled: configured, refetchInterval: 30_000 },
   });
 
+  const hasRealData = Boolean(data);
   const stats: PoolStats | undefined = data
     ? {
         totalPremiums: data[0],
@@ -37,10 +38,23 @@ export function usePoolStats() {
         totalActiveCoverage: data[4],
         totalShares: data[5],
       }
-    : undefined;
+    : isLoading
+    ? undefined
+    : MOCK_POOL_STATS;
 
-  return { stats, isLoading, refetch };
+  return { stats, isLoading, refetch, isMock: !isLoading && !hasRealData };
 }
+
+/** Realistic demo data shown when no on-chain data is available (e.g. wallet
+ *  disconnected, wrong chain, or fresh deployment with no policies yet). */
+const MOCK_POOL_STATS: PoolStats = {
+  totalPremiums: 12_480_000_000n,   // $12,480
+  totalPayouts: 5_200_000_000n,     // $5,200
+  balance: 1_850_000_000_000n,      // $1,850,000
+  activePolicies: 23n,
+  totalActiveCoverage: 1_200_000_000_000n, // $1,200,000
+  totalShares: 42n,
+};
 
 /** Policy IDs owned by the connected wallet, then the full Policy struct for each. */
 export function useUserPolicies() {

@@ -199,9 +199,10 @@ function BuyPolicyForm() {
   );
   const [regionIndex, setRegionIndex] = useState(initialIndex);
   const [coverage, setCoverage] = useState("1000");
+  const [customLat, setCustomLat] = useState("-41.2865");
+  const [customLng, setCustomLng] = useState("174.7762");
 
   const region = REGIONS[regionIndex];
-<<<<<<< Updated upstream
   const isCustom = region.lat === null;
   const lat = isCustom ? customLat : String(region.lat);
   const lng = isCustom ? customLng : String(region.lng);
@@ -211,11 +212,6 @@ function BuyPolicyForm() {
   const nzRegion = isCustom
     ? getNearestRegion(latNum, lngNum)
     : getRegionForCity(region.id);
-=======
-  const lat = String(region.lat);
-  const lng = String(region.lng);
-  const selectedCityId = region.id;
->>>>>>> Stashed changes
 
   const coverageNum = Number(coverage) || 0;
   const premium = coverageNum * 0.01;
