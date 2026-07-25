@@ -9,7 +9,7 @@ import {
   useWriteContract,
 } from "wagmi";
 import {
-  MOCK_DNZD_ABI,
+  MOCK_USDC_ABI,
   QUAKESHIELD_ABI,
   getContracts,
   isChainConfigured,
@@ -27,18 +27,18 @@ export type DepositStep =
 export function useDeposit() {
   const { address } = useAccount();
   const chainId = useChainId();
-  const { QUAKESHIELD_ADDRESS, DNZD_ADDRESS } = getContracts(chainId);
+  const { QUAKESHIELD_ADDRESS, USDC_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
   const [step, setStep] = useState<DepositStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: DNZD_ADDRESS as `0x${string}`,
-    abi: MOCK_DNZD_ABI,
+    address: USDC_ADDRESS as `0x${string}`,
+    abi: MOCK_USDC_ABI,
     functionName: "allowance",
     args: address ? [address, QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
-    query: { enabled: Boolean(address && DNZD_ADDRESS) },
+    query: { enabled: Boolean(address && USDC_ADDRESS) },
   });
 
   const { writeContractAsync } = useWriteContract();
@@ -55,8 +55,8 @@ export function useDeposit() {
         if (currentAllowance < amount) {
           setStep("approving");
           const approveHash = await writeContractAsync({
-            address: DNZD_ADDRESS as `0x${string}`,
-            abi: MOCK_DNZD_ABI,
+            address: USDC_ADDRESS as `0x${string}`,
+            abi: MOCK_USDC_ABI,
             functionName: "approve",
             args: [QUAKESHIELD_ADDRESS as `0x${string}`, amount],
           });
@@ -87,7 +87,7 @@ export function useDeposit() {
       refetchAllowance,
       writeContractAsync,
       QUAKESHIELD_ADDRESS,
-      DNZD_ADDRESS,
+      USDC_ADDRESS,
     ],
   );
 

@@ -2,13 +2,13 @@
 
 import { useCallback, useState } from "react";
 import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { MOCK_DNZD_ABI, QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
+import { MOCK_USDC_ABI, QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
 import { getFriendlyTxErrorMessage } from "@/lib/errors";
 
 export type BuyPolicyStep = "idle" | "approving" | "buying" | "done" | "error";
 
 export interface BuyPolicyInput {
-  coverageAmount: bigint; // DNZD, 6 decimals
+  coverageAmount: bigint; // USDC, 6 decimals
   triggerMagnitude: bigint; // x100
   centerLat: bigint; // x1e6
   centerLng: bigint; // x1e6
@@ -19,18 +19,18 @@ export interface BuyPolicyInput {
 export function useBuyPolicy() {
   const { address } = useAccount();
   const chainId = useChainId();
-  const { QUAKESHIELD_ADDRESS, DNZD_ADDRESS } = getContracts(chainId);
+  const { QUAKESHIELD_ADDRESS, USDC_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
   const [step, setStep] = useState<BuyPolicyStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const [buyTxHash, setBuyTxHash] = useState<`0x${string}` | undefined>();
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: DNZD_ADDRESS as `0x${string}`,
-    abi: MOCK_DNZD_ABI,
+    address: USDC_ADDRESS as `0x${string}`,
+    abi: MOCK_USDC_ABI,
     functionName: "allowance",
     args: address ? [address, QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
-    query: { enabled: Boolean(address && DNZD_ADDRESS) },
+    query: { enabled: Boolean(address && USDC_ADDRESS) },
   });
 
   const { writeContractAsync } = useWriteContract();
@@ -49,8 +49,8 @@ export function useBuyPolicy() {
         if (currentAllowance < premium) {
           setStep("approving");
           const approveHash = await writeContractAsync({
-            address: DNZD_ADDRESS as `0x${string}`,
-            abi: MOCK_DNZD_ABI,
+            address: USDC_ADDRESS as `0x${string}`,
+            abi: MOCK_USDC_ABI,
             functionName: "approve",
             args: [QUAKESHIELD_ADDRESS as `0x${string}`, premium],
           });
@@ -81,7 +81,7 @@ export function useBuyPolicy() {
         throw e;
       }
     },
-    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, DNZD_ADDRESS]
+    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, USDC_ADDRESS]
   );
 
   return {
