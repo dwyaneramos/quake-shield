@@ -126,8 +126,8 @@ contract QuakeShield is Ownable, ReentrancyGuard {
     function deposit(uint256 amount) external nonReentrant {
         require(amount > 0, "QuakeShield: deposit must be > 0");
 
-        uint256 poolValueBefore = usdc.balanceOf(address(this));
-        usdc.safeTransferFrom(msg.sender, address(this), amount);
+        uint256 poolValueBefore = dnzd.balanceOf(address(this));
+        dnzd.safeTransferFrom(msg.sender, address(this), amount);
 
         uint256 shares;
         if (totalShares == 0) {
@@ -149,7 +149,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         uint256 myShares = providerShares[msg.sender];
         require(myShares > 0, "QuakeShield: no shares");
 
-        uint256 poolValue = usdc.balanceOf(address(this));
+        uint256 poolValue = dnzd.balanceOf(address(this));
         uint256 withdrawAmount = (myShares * poolValue) / totalShares;
 
         // Solvency check: pool must remain at 150% of active coverage after withdrawal
@@ -164,7 +164,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         providerShares[msg.sender] = 0;
         totalShares -= myShares;
 
-        usdc.safeTransfer(msg.sender, withdrawAmount);
+        dnzd.safeTransfer(msg.sender, withdrawAmount);
         emit CapitalWithdrawn(msg.sender, withdrawAmount);
     }
 
@@ -190,7 +190,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         require(radiusKm > 0 && radiusKm <= 500, "QuakeShield: radius must be 1-500km");
 
         // Solvency check: pool must have 150% reserve ratio after this policy
-        uint256 poolBalance = usdc.balanceOf(address(this));
+        uint256 poolBalance = dnzd.balanceOf(address(this));
         uint256 newTotalCoverage = totalActiveCoverage + coverageAmount;
         require(
             (poolBalance * 10000) / newTotalCoverage >= MIN_RESERVE_RATIO_BPS,
@@ -321,7 +321,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         if (totalShares == 0 || shares == 0) {
             return (shares, 0);
         }
-        currentValue = (shares * usdc.balanceOf(address(this))) / totalShares;
+        currentValue = (shares * dnzd.balanceOf(address(this))) / totalShares;
     }
 
     /**
@@ -329,7 +329,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
      * @return reserveRatioBps Reserve ratio scaled by 10000
      */
     function getReserveRatio() external view returns (uint256 reserveRatioBps) {
-        uint256 poolValue = usdc.balanceOf(address(this));
+        uint256 poolValue = dnzd.balanceOf(address(this));
         if (totalActiveCoverage == 0) {
             return type(uint256).max;
         }

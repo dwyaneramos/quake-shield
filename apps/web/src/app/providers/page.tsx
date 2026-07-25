@@ -25,7 +25,7 @@ export default function ProvidersPage() {
 
   const handleDeposit = async () => {
     if (depositNum <= 0) return;
-    await deposit(SCALE.toUSDC(depositNum)).catch(() => {});
+    await deposit(SCALE.toDNZD(depositNum)).catch(() => {});
   };
 
   const handleWithdraw = async () => {
@@ -66,11 +66,11 @@ export default function ProvidersPage() {
           <div className="grid md:grid-cols-4 gap-6">
             <StatCard
               label="Pool Balance"
-              value={stats ? `${SCALE.fromUSDC(stats.balance).toLocaleString()} USDC` : "--"}
+              value={stats ? `${SCALE.fromDNZD(stats.balance).toLocaleString()} USDC` : "--"}
             />
             <StatCard
               label="Active Coverage"
-              value={stats ? `${SCALE.fromUSDC(stats.totalActiveCoverage).toLocaleString()} USDC` : "--"}
+              value={stats ? `${SCALE.fromDNZD(stats.totalActiveCoverage).toLocaleString()} USDC` : "--"}
             />
             <StatCard
               label="Reserve Ratio"
@@ -121,7 +121,7 @@ export default function ProvidersPage() {
                 <div className="flex justify-between items-center p-4 bg-ink-50 rounded-lg">
                   <span className="text-ink-600">Current Value</span>
                   <span className="font-bold text-ink-900">
-                    {position ? `${SCALE.fromUSDC(position.currentValue).toLocaleString()} USDC` : "0 USDC"}
+                    {position ? `${SCALE.fromDNZD(position.currentValue).toLocaleString()} USDC` : "0 USDC"}
                   </span>
                 </div>
                 {position && position.shares > 0n && (
