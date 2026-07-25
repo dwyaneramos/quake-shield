@@ -15,7 +15,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Header } from "@/components/layout/Header";
 import { isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";

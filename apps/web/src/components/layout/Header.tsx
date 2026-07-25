@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: "/quakes", label: "Live Quakes" },
   { href: "/policies", label: "Policies & Claims" },
   { href: "/policies/new", label: "Buy Policy" },
+  { href: "/investments", label: "Investments" },
   { href: "/admin", label: "Admin" },
 ];
 

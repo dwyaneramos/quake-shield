@@ -29,9 +29,9 @@ const FEATURES = [
     ),
   },
   {
-    title: "Backed by a real pool",
+    title: "Backed by real investors",
     description:
-      "Every policy is collateralized by DNZD locked from capital providers, kept above a 150% reserve ratio at all times.",
+      "Every policy is collateralized by DNZD invested behind specific regions, kept above a 150% reserve ratio at all times.",
     icon: (
       <path
         strokeLinecap="round"
@@ -74,6 +74,24 @@ const STEPS = [
   },
 ];
 
+const INVEST_STEPS = [
+  {
+    step: "1",
+    title: "Pick a region",
+    description: "Choose an NZ region to back — Canterbury, Otago, Wellington, and more.",
+  },
+  {
+    step: "2",
+    title: "Invest DNZD",
+    description: "Your capital backs that region's policies and sets its reserve ratio.",
+  },
+  {
+    step: "3",
+    title: "Earn every quiet fortnight",
+    description: "No qualifying quake in the region means an automatic return, funded by premiums.",
+  },
+];
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-white">
@@ -85,26 +103,29 @@ export default function Home() {
             Live on-chain earthquake protection for New Zealand
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-ink-900 max-w-4xl mx-auto">
-            Earthquake insurance that{" "}
-            <span className="text-shield-600">pays in minutes</span>, not months
+            Earthquake cover that{" "}
+            <span className="text-shield-600">pays in minutes</span>, backed by
+            investors who bet on quiet ground
           </h1>
           <p className="mt-6 text-lg sm:text-xl text-ink-600 max-w-2xl mx-auto">
-            QuakeShield is parametric, automatic earthquake cover. Set a trigger,
-            pay a premium, and get paid instantly when GeoNet confirms the shake
-            — no adjusters, no claims forms, no waiting.
+            QuakeShield is parametric earthquake insurance for New Zealand, funded
+            by investors who back specific regions instead of a quake happening
+            there. Policyholders set a trigger and get paid the instant GeoNet
+            confirms it. Investors earn a fortnightly return for every region that
+            stays quiet.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/dashboard"
+              href="/policies/new"
               className="inline-flex items-center justify-center bg-shield-600 text-white px-8 py-3.5 rounded-xl font-semibold text-lg shadow-lg shadow-shield-600/20 hover:bg-shield-700 transition-colors"
             >
-              Get Started
+              Get Covered
             </Link>
             <Link
-              href="/quakes"
+              href="/investments"
               className="inline-flex items-center justify-center border border-ink-200 text-ink-700 px-8 py-3.5 rounded-xl font-semibold text-lg hover:bg-ink-50 transition-colors"
             >
-              See Live Quake Data
+              Invest in a Region
             </Link>
           </div>
           <p className="mt-6 text-sm text-ink-400">
@@ -121,17 +142,84 @@ export default function Home() {
             <div className="text-sm text-ink-500 mt-1">Minimum reserve ratio</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-ink-900">Minutes</div>
-            <div className="text-sm text-ink-500 mt-1">To payout, not months</div>
+            <div className="text-2xl sm:text-3xl font-bold text-ink-900">16</div>
+            <div className="text-sm text-ink-500 mt-1">Investable NZ regions</div>
+          </div>
+          <div>
+            <div className="text-2xl sm:text-3xl font-bold text-ink-900">Fortnightly</div>
+            <div className="text-sm text-ink-500 mt-1">Investor returns, paid automatically</div>
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-bold text-ink-900">GeoNet</div>
             <div className="text-sm text-ink-500 mt-1">Verified seismic data</div>
           </div>
-          <div>
-            <div className="text-2xl sm:text-3xl font-bold text-ink-900">100%</div>
-            <div className="text-sm text-ink-500 mt-1">On-chain and transparent</div>
-          </div>
+        </div>
+      </section>
+
+      {/* Two sides of one pool */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold text-ink-900">
+            Two sides of one pool
+          </h2>
+          <p className="mt-4 text-lg text-ink-600">
+            Policyholders and investors sit on opposite sides of the same bet —
+            and both get paid automatically, on-chain.
+          </p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <Link
+            href="/policies/new"
+            className="group rounded-2xl border border-ink-100 bg-white p-8 shadow-sm hover:shadow-md hover:border-shield-300 transition-all"
+          >
+            <div className="w-12 h-12 bg-shield-100 text-shield-600 rounded-lg flex items-center justify-center mb-5">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12.75L11.25 15 15 9.75M21 12c0 4.556-3.03 8.4-7.19 9.632a1.5 1.5 0 01-.86.005C8.79 20.397 5.76 16.556 5.76 12V6.34a1.5 1.5 0 01.94-1.39l5.25-2.1a1.5 1.5 0 011.1 0l5.25 2.1a1.5 1.5 0 01.94 1.39V12z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-ink-900 mb-2">
+              I want cover — bet a quake happens
+            </h3>
+            <p className="text-ink-600 mb-4">
+              Set a magnitude trigger, radius, and coverage amount. Pay a premium
+              and get an instant on-chain payout if GeoNet confirms a qualifying
+              quake.
+            </p>
+            <span className="text-shield-600 font-semibold group-hover:text-shield-700">
+              Buy a policy →
+            </span>
+          </Link>
+          <Link
+            href="/investments"
+            className="group rounded-2xl border border-ink-100 bg-white p-8 shadow-sm hover:shadow-md hover:border-shield-300 transition-all"
+          >
+            <div className="w-12 h-12 bg-quake-100 text-quake-600 rounded-lg flex items-center justify-center mb-5">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-ink-900 mb-2">
+              I want to invest — bet a quake doesn&rsquo;t
+            </h3>
+            <p className="text-ink-600 mb-4">
+              Back a region with DNZD. Earn a return every fortnight it stays
+              quiet, priced dynamically by how active that region has been
+              lately. Withdraw anytime.
+            </p>
+            <span className="text-quake-600 font-semibold group-hover:text-quake-700">
+              Explore regions →
+            </span>
+          </Link>
         </div>
       </section>
 
@@ -169,7 +257,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How it works */}
+      {/* How it works: insurance */}
       <section className="bg-ink-50/60 py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
@@ -196,6 +284,39 @@ export default function Home() {
         </div>
       </section>
 
+      {/* How it works: investing */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-ink-900">
+              Investing, in three steps
+            </h2>
+            <p className="mt-4 text-lg text-ink-600">
+              Your capital is what makes instant payouts possible — and what
+              makes it worth backing quiet ground.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {INVEST_STEPS.map((step) => (
+              <div key={step.step} className="text-center">
+                <div className="w-14 h-14 mx-auto rounded-full bg-quake-500 text-white font-bold text-xl flex items-center justify-center mb-5 shadow-lg shadow-quake-500/20">
+                  {step.step}
+                </div>
+                <h3 className="font-semibold text-lg text-ink-900 mb-2">
+                  {step.title}
+                </h3>
+                <p className="text-ink-600">{step.description}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-sm text-ink-400 mt-10 max-w-xl mx-auto">
+            Investing carries risk: if a significant quake strikes a region you&rsquo;ve
+            backed, payouts there are charged against invested capital before
+            anything else.
+          </p>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         <div className="relative overflow-hidden rounded-3xl bg-shield-700 px-6 py-16 sm:px-16 text-center">
@@ -211,15 +332,23 @@ export default function Home() {
               Don&rsquo;t wait for the next big one
             </h2>
             <p className="mt-4 text-lg text-shield-100 max-w-xl mx-auto">
-              Get covered in minutes. Your policy, your trigger, your payout —
-              guaranteed by code, not a claims department.
+              Get covered in minutes, or put your capital behind the regions you
+              think will stay quiet — guaranteed by code, not a claims department.
             </p>
-            <Link
-              href="/dashboard"
-              className="mt-8 inline-flex items-center justify-center bg-white text-shield-700 px-8 py-3.5 rounded-xl font-semibold text-lg shadow-lg hover:bg-shield-50 transition-colors"
-            >
-              Get Started
-            </Link>
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/policies/new"
+                className="inline-flex items-center justify-center bg-white text-shield-700 px-8 py-3.5 rounded-xl font-semibold text-lg shadow-lg hover:bg-shield-50 transition-colors"
+              >
+                Get Covered
+              </Link>
+              <Link
+                href="/investments"
+                className="inline-flex items-center justify-center border border-shield-300 text-white px-8 py-3.5 rounded-xl font-semibold text-lg hover:bg-shield-600 transition-colors"
+              >
+                Invest in a Region
+              </Link>
+            </div>
           </div>
         </div>
       </section>
