@@ -67,7 +67,7 @@ export default function CityWidgets({
                 className="text-left w-full"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-ink-800 truncate">
+                  <span className="text-base font-bold text-ink-900 truncate">
                     {city.name}
                   </span>
                   {loading ? (

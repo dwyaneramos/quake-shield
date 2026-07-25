@@ -1,13 +1,29 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { MOCK_DNZD_ABI, QUAKESHIELD_ABI, getContracts, isChainConfigured } from "@/lib/contracts";
+import {
+  useAccount,
+  useChainId,
+  usePublicClient,
+  useReadContract,
+  useWriteContract,
+} from "wagmi";
+import {
+  MOCK_DNZD_ABI,
+  QUAKESHIELD_ABI,
+  getContracts,
+  isChainConfigured,
+} from "@/lib/contracts";
 import type { ProviderPosition } from "@/types";
 
-export type DepositStep = "idle" | "approving" | "depositing" | "done" | "error";
+export type DepositStep =
+  | "idle"
+  | "approving"
+  | "depositing"
+  | "done"
+  | "error";
 
-/** Deposit USDC as a capital provider (approve + deposit). */
+/** Deposit DNZD as a capital provider (approve + deposit). */
 export function useDeposit() {
   const { address } = useAccount();
   const chainId = useChainId();
@@ -65,7 +81,14 @@ export function useDeposit() {
         throw e;
       }
     },
-    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, DNZD_ADDRESS]
+    [
+      allowance,
+      publicClient,
+      refetchAllowance,
+      writeContractAsync,
+      QUAKESHIELD_ADDRESS,
+      DNZD_ADDRESS,
+    ],
   );
 
   return {
@@ -87,7 +110,9 @@ export function useWithdraw() {
   const chainId = useChainId();
   const { QUAKESHIELD_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
-  const [step, setStep] = useState<"idle" | "withdrawing" | "done" | "error">("idle");
+  const [step, setStep] = useState<"idle" | "withdrawing" | "done" | "error">(
+    "idle",
+  );
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
 

@@ -8,7 +8,7 @@ export const QUAKESHIELD_ABI = [
     "inputs": [
       {
         "internalType": "address",
-        "name": "_dnzd",
+        "name": "_DNZD",
         "type": "address"
       }
     ],
@@ -837,7 +837,7 @@ export const QUAKESHIELD_ABI = [
   },
   {
     "inputs": [],
-    "name": "dnzd",
+    "name": "DNZD",
     "outputs": [
       {
         "internalType": "contract IERC20",

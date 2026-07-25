@@ -11,17 +11,17 @@ async function main() {
   console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)));
 
   const suffix = network.name.toUpperCase();
-  const dnzdAddress = process.env[`DNZD_ADDRESS_${suffix}`] || process.env[`NEXT_PUBLIC_DNZD_ADDRESS_${suffix}`];
+  const DNZDAddress = process.env[`DNZD_ADDRESS_${suffix}`] || process.env[`NEXT_PUBLIC_DNZD_ADDRESS_${suffix}`];
   const quakeShieldAddress = process.env[`QUAKE_SHIELD_ADDRESS_${suffix}`] || process.env[`NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_${suffix}`];
 
-  if (!dnzdAddress) throw new Error(`Missing DNZD_ADDRESS_${suffix} / NEXT_PUBLIC_DNZD_ADDRESS_${suffix} in .env`);
+  if (!DNZDAddress) throw new Error(`Missing DNZD_ADDRESS_${suffix} / NEXT_PUBLIC_DNZD_ADDRESS_${suffix} in .env`);
   if (!quakeShieldAddress) throw new Error(`Missing QUAKE_SHIELD_ADDRESS_${suffix} / NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_${suffix} in .env`);
 
   console.log("\n--- Deploying EarthquakeMarket ---");
-  console.log("Reusing token:", dnzdAddress);
+  console.log("Reusing token:", DNZDAddress);
   console.log("Reusing QuakeShield:", quakeShieldAddress);
   const EarthquakeMarket = await ethers.getContractFactory("EarthquakeMarket");
-  const earthquakeMarket = await EarthquakeMarket.deploy(dnzdAddress, quakeShieldAddress);
+  const earthquakeMarket = await EarthquakeMarket.deploy(DNZDAddress, quakeShieldAddress);
   await earthquakeMarket.waitForDeployment();
   const earthquakeMarketAddress = await earthquakeMarket.getAddress();
   console.log("EarthquakeMarket deployed to:", earthquakeMarketAddress);

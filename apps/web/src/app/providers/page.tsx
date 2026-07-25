@@ -5,19 +5,36 @@ import { useState } from "react";
 import { useAccount, useChainId } from "wagmi";
 import { ConnectButton } from "@/components/web3/ConnectButton";
 import { isChainConfigured } from "@/lib/contracts";
-import { useDeposit, useMyPosition, useWithdraw } from "@/lib/hooks/useCapitalProvider";
+import {
+  useDeposit,
+  useMyPosition,
+  useWithdraw,
+} from "@/lib/hooks/useCapitalProvider";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
 import { getExplorerUrl } from "@/lib/chains";
 import { SCALE } from "@/types";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function ProvidersPage() {
   const { isConnected } = useAccount();
   const chainId = useChainId();
   const chainConfigured = isChainConfigured(chainId);
-  const { stats } = usePoolStats();
-  const { position } = useMyPosition();
-  const { deposit, step: depositStep, error: depositError, txHash: depositTxHash, reset: resetDeposit } = useDeposit();
-  const { withdraw, step: withdrawStep, error: withdrawError, txHash: withdrawTxHash, reset: resetWithdraw } = useWithdraw();
+  const { stats, isLoading: statsLoading } = usePoolStats();
+  const { position, isLoading: positionLoading } = useMyPosition();
+  const {
+    deposit,
+    step: depositStep,
+    error: depositError,
+    txHash: depositTxHash,
+    reset: resetDeposit,
+  } = useDeposit();
+  const {
+    withdraw,
+    step: withdrawStep,
+    error: withdrawError,
+    txHash: withdrawTxHash,
+    reset: resetWithdraw,
+  } = useWithdraw();
 
   const [depositAmount, setDepositAmount] = useState("1000");
 
@@ -32,23 +49,35 @@ export default function ProvidersPage() {
     await withdraw().catch(() => {});
   };
 
-  const utilization = stats && stats.totalActiveCoverage > 0n
-    ? Number((stats.balance * 10000n) / stats.totalActiveCoverage) / 100
-    : null;
+  const utilization =
+    stats && stats.totalActiveCoverage > 0n
+      ? Number((stats.balance * 10000n) / stats.totalActiveCoverage) / 100
+      : null;
 
-  const yieldEarned = position && position.shares > 0n && stats && stats.totalShares > 0n
-    ? position.currentValue - (position.shares * stats.balance) / (stats.totalShares + position.shares)
-    : 0n;
+  const yieldEarned =
+    position && position.shares > 0n && stats && stats.totalShares > 0n
+      ? position.currentValue -
+        (position.shares * stats.balance) /
+          (stats.totalShares + position.shares)
+      : 0n;
 
   return (
     <div className="min-h-screen bg-ink-50">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-ink-900">Capital Providers</h1>
-            <p className="text-ink-600 mt-1">Deposit USDC to back the insurance pool and earn yield from premiums.</p>
+            <h1 className="text-3xl font-bold text-ink-900">
+              Capital Providers
+            </h1>
+            <p className="text-ink-600 mt-1">
+              Deposit DNZD to back the insurance pool and earn yield from
+              premiums.
+            </p>
           </div>
-          <Link href="/dashboard" className="text-sm font-semibold text-shield-600 hover:text-shield-700">
+          <Link
+            href="/dashboard"
+            className="text-sm font-semibold text-shield-600 hover:text-shield-700"
+          >
             ← Back to Dashboard
           </Link>
         </div>
@@ -62,23 +91,39 @@ export default function ProvidersPage() {
 
         {/* Pool Overview */}
         <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-ink-900 mb-4">Pool Overview</h2>
+          <h2 className="text-xl font-semibold text-ink-900 mb-4">
+            Pool Overview
+          </h2>
           <div className="grid md:grid-cols-4 gap-6">
             <StatCard
               label="Pool Balance"
-              value={stats ? `${SCALE.fromDNZD(stats.balance).toLocaleString()} USDC` : "--"}
+              value={
+                stats
+                  ? `${SCALE.fromDNZD(stats.balance).toLocaleString()} DNZD`
+                  : "--"
+              }
+              isLoading={statsLoading}
             />
             <StatCard
               label="Active Coverage"
-              value={stats ? `${SCALE.fromDNZD(stats.totalActiveCoverage).toLocaleString()} USDC` : "--"}
+              value={
+                stats
+                  ? `${SCALE.fromDNZD(
+                      stats.totalActiveCoverage,
+                    ).toLocaleString()} DNZD`
+                  : "--"
+              }
+              isLoading={statsLoading}
             />
             <StatCard
               label="Reserve Ratio"
               value={utilization !== null ? `${utilization.toFixed(0)}%` : "∞"}
+              isLoading={statsLoading}
             />
             <StatCard
               label="Total Shares"
               value={stats ? stats.totalShares.toLocaleString() : "0"}
+              isLoading={statsLoading}
             />
           </div>
           {utilization !== null && (
@@ -90,7 +135,11 @@ export default function ProvidersPage() {
               <div className="w-full bg-ink-100 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full transition-all ${
-                    utilization > 120 ? "bg-red-500" : utilization > 80 ? "bg-yellow-500" : "bg-shield-500"
+                    utilization > 120
+                      ? "bg-red-500"
+                      : utilization > 80
+                      ? "bg-yellow-500"
+                      : "bg-shield-500"
                   }`}
                   style={{ width: `${Math.min(utilization, 100)}%` }}
                 />
@@ -107,7 +156,9 @@ export default function ProvidersPage() {
         <div className="grid md:grid-cols-2 gap-6">
           {/* Your Position */}
           <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6">
-            <h2 className="text-xl font-semibold text-ink-900 mb-4">Your Position</h2>
+            <h2 className="text-xl font-semibold text-ink-900 mb-4">
+              Your Position
+            </h2>
             {!isConnected ? (
               <div className="text-center py-8">
                 <ConnectButton />
@@ -116,20 +167,38 @@ export default function ProvidersPage() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-ink-50 rounded-lg">
                   <span className="text-ink-600">Your Shares</span>
-                  <span className="font-bold text-ink-900">{position ? position.shares.toLocaleString() : "0"}</span>
+                  {positionLoading ? (
+                    <Skeleton className="h-5 w-16" />
+                  ) : (
+                    <span className="font-bold text-ink-900">
+                      {position ? position.shares.toLocaleString() : "0"}
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center p-4 bg-ink-50 rounded-lg">
                   <span className="text-ink-600">Current Value</span>
-                  <span className="font-bold text-ink-900">
-                    {position ? `${SCALE.fromDNZD(position.currentValue).toLocaleString()} USDC` : "0 USDC"}
-                  </span>
+                  {positionLoading ? (
+                    <Skeleton className="h-5 w-24" />
+                  ) : (
+                    <span className="font-bold text-ink-900">
+                      {position
+                        ? `${SCALE.fromDNZD(
+                            position.currentValue,
+                          ).toLocaleString()} DNZD`
+                        : "0 DNZD"}
+                    </span>
+                  )}
                 </div>
                 {position && position.shares > 0n && (
                   <div className="flex justify-between items-center p-4 bg-shield-50 rounded-lg">
                     <span className="text-shield-700">Pool Share</span>
                     <span className="font-bold text-shield-700">
                       {stats && stats.totalShares > 0n
-                        ? `${((Number(position.shares) / Number(stats.totalShares)) * 100).toFixed(2)}%`
+                        ? `${(
+                            (Number(position.shares) /
+                              Number(stats.totalShares)) *
+                            100
+                          ).toFixed(2)}%`
                         : "0%"}
                     </span>
                   </div>
@@ -140,10 +209,14 @@ export default function ProvidersPage() {
                   <div className="pt-4 border-t border-ink-100">
                     {withdrawStep === "done" ? (
                       <div className="text-center p-4 bg-shield-50 rounded-lg">
-                        <p className="font-medium text-shield-700 mb-2">Withdrawal successful!</p>
+                        <p className="font-medium text-shield-700 mb-2">
+                          Withdrawal successful!
+                        </p>
                         {withdrawTxHash && (
                           <a
-                            href={`${getExplorerUrl(chainId)}/tx/${withdrawTxHash}`}
+                            href={`${getExplorerUrl(
+                              chainId,
+                            )}/tx/${withdrawTxHash}`}
                             target="_blank"
                             rel="noreferrer"
                             className="text-sm text-shield-600 hover:text-shield-700"
@@ -151,7 +224,10 @@ export default function ProvidersPage() {
                             View on Polygonscan →
                           </a>
                         )}
-                        <button onClick={resetWithdraw} className="mt-2 text-sm text-ink-500 hover:text-ink-700">
+                        <button
+                          onClick={resetWithdraw}
+                          className="mt-2 text-sm text-ink-500 hover:text-ink-700"
+                        >
                           Dismiss
                         </button>
                       </div>
@@ -161,10 +237,16 @@ export default function ProvidersPage() {
                         disabled={withdrawStep === "withdrawing"}
                         className="w-full bg-ink-900 text-white py-3 rounded-lg font-semibold hover:bg-ink-800 transition-colors disabled:opacity-50"
                       >
-                        {withdrawStep === "withdrawing" ? "Withdrawing…" : "Withdraw All"}
+                        {withdrawStep === "withdrawing"
+                          ? "Withdrawing…"
+                          : "Withdraw All"}
                       </button>
                     )}
-                    {withdrawError && <p className="text-sm text-quake-700 mt-2">{withdrawError}</p>}
+                    {withdrawError && (
+                      <p className="text-sm text-quake-700 mt-2">
+                        {withdrawError}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -173,7 +255,9 @@ export default function ProvidersPage() {
 
           {/* Deposit Form */}
           <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6">
-            <h2 className="text-xl font-semibold text-ink-900 mb-4">Deposit USDC</h2>
+            <h2 className="text-xl font-semibold text-ink-900 mb-4">
+              Deposit DNZD
+            </h2>
             {!isConnected ? (
               <div className="text-center py-8">
                 <ConnectButton />
@@ -181,7 +265,9 @@ export default function ProvidersPage() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-ink-700 mb-2">Amount (USDC)</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-2">
+                    Amount (DNZD)
+                  </label>
                   <input
                     type="number"
                     min={0}
@@ -192,23 +278,39 @@ export default function ProvidersPage() {
                 </div>
 
                 <div className="bg-ink-50 rounded-lg p-4 text-sm text-ink-600 space-y-1">
-                  <p>Premiums from policyholders are distributed to providers proportionally.</p>
-                  <p className="font-medium text-ink-700">Your pool share after deposit: </p>
+                  <p>
+                    Premiums from policyholders are distributed to providers
+                    proportionally.
+                  </p>
+                  <p className="font-medium text-ink-700">
+                    Your pool share after deposit:{" "}
+                  </p>
                   {stats && stats.totalShares > 0n ? (
                     (() => {
                       const currentPoolValue = Number(stats.balance) / 1e6;
                       const newDepositValue = depositNum;
-                      const sharePercent = (newDepositValue / (currentPoolValue + newDepositValue)) * 100;
-                      return <p className="font-bold text-shield-700">~{sharePercent.toFixed(2)}%</p>;
+                      const sharePercent =
+                        (newDepositValue /
+                          (currentPoolValue + newDepositValue)) *
+                        100;
+                      return (
+                        <p className="font-bold text-shield-700">
+                          ~{sharePercent.toFixed(2)}%
+                        </p>
+                      );
                     })()
                   ) : (
-                    <p className="font-bold text-shield-700">100% (first provider)</p>
+                    <p className="font-bold text-shield-700">
+                      100% (first provider)
+                    </p>
                   )}
                 </div>
 
                 {depositStep === "done" ? (
                   <div className="text-center p-4 bg-shield-50 rounded-lg">
-                    <p className="font-medium text-shield-700 mb-2">Deposit successful!</p>
+                    <p className="font-medium text-shield-700 mb-2">
+                      Deposit successful!
+                    </p>
                     {depositTxHash && (
                       <a
                         href={`${getExplorerUrl(chainId)}/tx/${depositTxHash}`}
@@ -219,24 +321,33 @@ export default function ProvidersPage() {
                         View on Polygonscan →
                       </a>
                     )}
-                    <button onClick={resetDeposit} className="mt-2 text-sm text-ink-500 hover:text-ink-700">
+                    <button
+                      onClick={resetDeposit}
+                      className="mt-2 text-sm text-ink-500 hover:text-ink-700"
+                    >
                       Deposit More
                     </button>
                   </div>
                 ) : (
                   <button
                     onClick={handleDeposit}
-                    disabled={depositNum <= 0 || depositStep === "approving" || depositStep === "depositing"}
+                    disabled={
+                      depositNum <= 0 ||
+                      depositStep === "approving" ||
+                      depositStep === "depositing"
+                    }
                     className="w-full bg-shield-600 text-white py-3 rounded-lg font-semibold hover:bg-shield-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {depositStep === "approving"
-                      ? "Approving USDC…"
+                      ? "Approving DNZD…"
                       : depositStep === "depositing"
-                        ? "Depositing…"
-                        : "Deposit"}
+                      ? "Depositing…"
+                      : "Deposit"}
                   </button>
                 )}
-                {depositError && <p className="text-sm text-quake-700 mt-2">{depositError}</p>}
+                {depositError && (
+                  <p className="text-sm text-quake-700 mt-2">{depositError}</p>
+                )}
               </div>
             )}
           </div>
@@ -246,10 +357,22 @@ export default function ProvidersPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({
+  label,
+  value,
+  isLoading,
+}: {
+  label: string;
+  value: string;
+  isLoading?: boolean;
+}) {
   return (
     <div className="text-center p-4 bg-ink-50 rounded-lg">
-      <div className="text-2xl font-bold text-ink-900">{value}</div>
+      {isLoading ? (
+        <Skeleton className="h-8 w-20 mx-auto" />
+      ) : (
+        <div className="text-2xl font-bold text-ink-900">{value}</div>
+      )}
       <div className="text-sm text-ink-600 mt-1">{label}</div>
     </div>
   );

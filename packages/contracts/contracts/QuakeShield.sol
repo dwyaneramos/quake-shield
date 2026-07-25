@@ -41,7 +41,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     // ============ State Variables ============
 
-    IERC20 public immutable dnzd;
+    IERC20 public immutable DNZD;
 
     mapping(uint256 => Policy) public policies;
     mapping(address => uint256[]) public userPolicies;
@@ -56,7 +56,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
     // ============ Solvency & Capital Provider State ============
 
     uint256 public totalActiveCoverage;
-    uint256 public constant MAX_COVERAGE_PER_POLICY = 10_000e6; // 10,000 USDC
+    uint256 public constant MAX_COVERAGE_PER_POLICY = 10_000e6; // 10,000 DNZD
     uint256 public constant MIN_RESERVE_RATIO_BPS = 15000;      // 150% (15000 basis points)
 
     mapping(address => uint256) public providerShares;
@@ -99,9 +99,9 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     // ============ Constructor ============
 
-    constructor(address _dnzd) Ownable(msg.sender) {
-        require(_dnzd != address(0), "QuakeShield: zero address");
-        dnzd = IERC20(_dnzd);
+    constructor(address _DNZD) Ownable(msg.sender) {
+        require(_DNZD != address(0), "QuakeShield: zero address");
+        DNZD = IERC20(_DNZD);
         oracle = msg.sender;
     }
 
@@ -120,14 +120,14 @@ contract QuakeShield is Ownable, ReentrancyGuard {
     // ============ User Functions ============
 
     /**
-     * @notice Deposit USDC as a capital provider to earn yield from premiums
-     * @param amount USDC amount to deposit (6 decimals)
+     * @notice Deposit DNZD as a capital provider to earn yield from premiums
+     * @param amount DNZD amount to deposit (6 decimals)
      */
     function deposit(uint256 amount) external nonReentrant {
         require(amount > 0, "QuakeShield: deposit must be > 0");
 
-        uint256 poolValueBefore = dnzd.balanceOf(address(this));
-        dnzd.safeTransferFrom(msg.sender, address(this), amount);
+        uint256 poolValueBefore = DNZD.balanceOf(address(this));
+        DNZD.safeTransferFrom(msg.sender, address(this), amount);
 
         uint256 shares;
         if (totalShares == 0) {
@@ -149,7 +149,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         uint256 myShares = providerShares[msg.sender];
         require(myShares > 0, "QuakeShield: no shares");
 
-        uint256 poolValue = dnzd.balanceOf(address(this));
+        uint256 poolValue = DNZD.balanceOf(address(this));
         uint256 withdrawAmount = (myShares * poolValue) / totalShares;
 
         // Solvency check: pool must remain at 150% of active coverage after withdrawal
@@ -164,7 +164,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         providerShares[msg.sender] = 0;
         totalShares -= myShares;
 
-        dnzd.safeTransfer(msg.sender, withdrawAmount);
+        DNZD.safeTransfer(msg.sender, withdrawAmount);
         emit CapitalWithdrawn(msg.sender, withdrawAmount);
     }
 
@@ -190,7 +190,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         require(radiusKm > 0 && radiusKm <= 500, "QuakeShield: radius must be 1-500km");
 
         // Solvency check: pool must have 150% reserve ratio after this policy
-        uint256 poolBalance = dnzd.balanceOf(address(this));
+        uint256 poolBalance = DNZD.balanceOf(address(this));
         uint256 newTotalCoverage = totalActiveCoverage + coverageAmount;
         require(
             (poolBalance * 10000) / newTotalCoverage >= MIN_RESERVE_RATIO_BPS,
@@ -199,7 +199,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
         // 1% premium
         uint256 premium = coverageAmount * 10 / 1000;
-        dnzd.safeTransferFrom(msg.sender, address(this), premium);
+        DNZD.safeTransferFrom(msg.sender, address(this), premium);
 
         uint256 policyId = policyCounter++;
 
@@ -303,7 +303,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         return (
             totalPremiums,
             totalPayouts,
-            dnzd.balanceOf(address(this)),
+            DNZD.balanceOf(address(this)),
             activeCount,
             totalActiveCoverage,
             totalShares
@@ -314,14 +314,14 @@ contract QuakeShield is Ownable, ReentrancyGuard {
      * @notice Get a capital provider's share count and current value
      * @param provider The provider address
      * @return shares Number of shares owned
-     * @return currentValue Current USDC value of shares (deposit + yield)
+     * @return currentValue Current DNZD value of shares (deposit + yield)
      */
     function getProviderInfo(address provider) external view returns (uint256 shares, uint256 currentValue) {
         shares = providerShares[provider];
         if (totalShares == 0 || shares == 0) {
             return (shares, 0);
         }
-        currentValue = (shares * dnzd.balanceOf(address(this))) / totalShares;
+        currentValue = (shares * DNZD.balanceOf(address(this))) / totalShares;
     }
 
     /**
@@ -329,7 +329,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
      * @return reserveRatioBps Reserve ratio scaled by 10000
      */
     function getReserveRatio() external view returns (uint256 reserveRatioBps) {
-        uint256 poolValue = dnzd.balanceOf(address(this));
+        uint256 poolValue = DNZD.balanceOf(address(this));
         if (totalActiveCoverage == 0) {
             return type(uint256).max;
         }
@@ -366,7 +366,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
                 p.isActive = false;
                 totalPayouts += p.coverageAmount;
                 totalActiveCoverage -= p.coverageAmount;
-                dnzd.safeTransfer(p.policyholder, p.coverageAmount);
+                DNZD.safeTransfer(p.policyholder, p.coverageAmount);
                 emit PayoutExecuted(i, p.policyholder, p.coverageAmount, magnitude);
             }
         }

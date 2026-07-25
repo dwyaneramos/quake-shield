@@ -26,6 +26,7 @@ import HomeClient from "@/components/landing/HomeClient";
 import DashboardQuakeFeed from "@/components/quakes/DashboardQuakeFeed";
 import MagnitudeSlider from "@/components/landing/MagnitudeSlider";
 import { MarketsSection } from "@/components/dashboard/MarketsSection";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function DashboardPage() {
   const { isConnected } = useAccount();
@@ -38,26 +39,26 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-white">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_260px] gap-6 items-start">
-          <div className="min-w-0">
-            {/* Seismic Graph + City Widgets */}
-            <HomeClient minMagnitude={magnitudeThreshold} />
+        <div className="max-w-6xl mx-auto">
+          {/* Seismic Graph + Settings Panel + City Widgets */}
+          <HomeClient
+            minMagnitude={magnitudeThreshold}
+            settingsPanel={
+              <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 lg:sticky lg:top-6">
+                <h2 className="text-sm font-semibold text-ink-900 mb-4">
+                  Dashboard Settings
+                </h2>
+                <MagnitudeSlider
+                  value={magnitudeThreshold}
+                  onChange={setMagnitudeThreshold}
+                />
+              </div>
+            }
+          />
 
-            {/* Live Quake Feed */}
-            <div className="mt-6">
-              <DashboardQuakeFeed threshold={magnitudeThreshold} />
-            </div>
-          </div>
-
-          {/* Settings Panel */}
-          <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 lg:sticky lg:top-6">
-            <h2 className="text-sm font-semibold text-ink-900 mb-4">
-              Dashboard Settings
-            </h2>
-            <MagnitudeSlider
-              value={magnitudeThreshold}
-              onChange={setMagnitudeThreshold}
-            />
+          {/* Live Quake Feed */}
+          <div className="mt-6">
+            <DashboardQuakeFeed threshold={magnitudeThreshold} />
           </div>
         </div>
 
@@ -118,9 +119,18 @@ export default function DashboardPage() {
                   </Link>
                 </div>
                 {policiesLoading ? (
-                  <p className="p-8 text-center text-ink-500">
-                    Loading policies…
-                  </p>
+                  <div className="divide-y divide-ink-100">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="p-4 flex items-center gap-4">
+                        <Skeleton className="w-14 h-14 rounded-lg shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-1/3" />
+                          <Skeleton className="h-3.5 w-1/2" />
+                        </div>
+                        <Skeleton className="h-6 w-16 rounded-full shrink-0" />
+                      </div>
+                    ))}
+                  </div>
                 ) : policies.length === 0 ? (
                   <div className="p-8 text-center text-ink-500">
                     <p className="text-lg font-medium text-ink-900 mb-1">
@@ -204,6 +214,7 @@ export default function DashboardPage() {
                     ? `${SCALE.fromDNZD(stats.balance).toLocaleString()} DNZD`
                     : "--"
                 }
+                isLoading={statsLoading}
               />
               <StatCard
                 label="Active Coverage"
@@ -214,10 +225,12 @@ export default function DashboardPage() {
                       ).toLocaleString()} DNZD`
                     : "--"
                 }
+                isLoading={statsLoading}
               />
               <StatCard
                 label="Active Policies"
                 value={stats ? stats.activePolicies.toString() : "--"}
+                isLoading={statsLoading}
               />
               <StatCard
                 label="Total Premiums"
@@ -228,6 +241,7 @@ export default function DashboardPage() {
                       ).toLocaleString()} DNZD`
                     : "--"
                 }
+                isLoading={statsLoading}
               />
               <StatCard
                 label="Total Payouts"
@@ -238,6 +252,7 @@ export default function DashboardPage() {
                       ).toLocaleString()} DNZD`
                     : "--"
                 }
+                isLoading={statsLoading}
               />
             </div>
             {stats && stats.totalActiveCoverage > 0n && (
@@ -283,9 +298,6 @@ export default function DashboardPage() {
               <p className="mt-4 text-sm text-ink-500">
                 Deploy the contracts to see live stats here.
               </p>
-            )}
-            {chainConfigured && statsLoading && (
-              <p className="mt-4 text-sm text-ink-500">Loading pool stats…</p>
             )}
           </div>
 
@@ -378,10 +390,22 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({
+  label,
+  value,
+  isLoading,
+}: {
+  label: string;
+  value: string;
+  isLoading?: boolean;
+}) {
   return (
     <div className="text-center p-4 bg-ink-50 rounded-lg">
-      <div className="text-2xl font-bold text-ink-900">{value}</div>
+      {isLoading ? (
+        <Skeleton className="h-8 w-20 mx-auto" />
+      ) : (
+        <div className="text-2xl font-bold text-ink-900">{value}</div>
+      )}
       <div className="text-sm text-ink-600 mt-1">{label}</div>
     </div>
   );

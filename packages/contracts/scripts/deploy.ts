@@ -9,29 +9,29 @@ async function main() {
   // point QuakeShield at that instead of deploying a fresh MockDNZD.
   const externalTokenAddress = process.env[`DNZD_ADDRESS_${network.name.toUpperCase()}`];
 
-  let dnzdAddress: string;
+  let DNZDAddress: string;
   if (externalTokenAddress) {
-    dnzdAddress = externalTokenAddress;
+    DNZDAddress = externalTokenAddress;
     console.log("\n--- Using external token ---");
-    console.log("Token:", dnzdAddress);
+    console.log("Token:", DNZDAddress);
   } else {
     console.log("\n--- Deploying MockDNZD ---");
     const MockDNZD = await ethers.getContractFactory("MockDNZD");
-    const dnzd = await MockDNZD.deploy();
-    await dnzd.waitForDeployment();
-    dnzdAddress = await dnzd.getAddress();
-    console.log("MockDNZD deployed to:", dnzdAddress);
+    const DNZD = await MockDNZD.deploy();
+    await DNZD.waitForDeployment();
+    DNZDAddress = await DNZD.getAddress();
+    console.log("MockDNZD deployed to:", DNZDAddress);
 
     console.log("\n--- Minting test DNZD ---");
     const mintAmount = ethers.parseUnits("1000000", 6);
-    await dnzd.mint(deployer.address, mintAmount);
+    await DNZD.mint(deployer.address, mintAmount);
     console.log("Minted 1,000,000 DNZD to deployer");
   }
 
   // Deploy QuakeShield
   console.log("\n--- Deploying QuakeShield ---");
   const QuakeShield = await ethers.getContractFactory("QuakeShield");
-  const quakeshield = await QuakeShield.deploy(dnzdAddress);
+  const quakeshield = await QuakeShield.deploy(DNZDAddress);
   await quakeshield.waitForDeployment();
   const quakeshieldAddress = await quakeshield.getAddress();
   console.log("QuakeShield deployed to:", quakeshieldAddress);
@@ -40,7 +40,7 @@ async function main() {
   // recorded quake log for resolution.
   console.log("\n--- Deploying EarthquakeMarket ---");
   const EarthquakeMarket = await ethers.getContractFactory("EarthquakeMarket");
-  const earthquakeMarket = await EarthquakeMarket.deploy(dnzdAddress, quakeshieldAddress);
+  const earthquakeMarket = await EarthquakeMarket.deploy(DNZDAddress, quakeshieldAddress);
   await earthquakeMarket.waitForDeployment();
   const earthquakeMarketAddress = await earthquakeMarket.getAddress();
   console.log("EarthquakeMarket deployed to:", earthquakeMarketAddress);
@@ -50,7 +50,7 @@ async function main() {
   console.log("  DEPLOYMENT SUMMARY");
   console.log("====================================");
   console.log(`Network: ${network.name} (${network.config.chainId})`);
-  console.log("Token:", dnzdAddress, externalTokenAddress ? "(external)" : "(MockDNZD)");
+  console.log("Token:", DNZDAddress, externalTokenAddress ? "(external)" : "(MockDNZD)");
   console.log("QuakeShield:", quakeshieldAddress);
   console.log("EarthquakeMarket:", earthquakeMarketAddress);
   console.log("====================================");

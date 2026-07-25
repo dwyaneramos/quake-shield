@@ -8,6 +8,7 @@ import { ConnectButton } from "@/components/web3/ConnectButton";
 import { getContracts } from "@/lib/contracts";
 import { useMarkets } from "@/lib/hooks/useMarkets";
 import { SCALE } from "@/types";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 function timeUntil(resolutionTime: bigint): string {
   const now = Date.now() / 1000;
@@ -65,7 +66,19 @@ export default function MarketsPage() {
             </div>
           </div>
         ) : isLoading ? (
-          <p className="text-center text-ink-500 py-12">Loading markets…</p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl shadow-sm border border-ink-100 p-6">
+                <Skeleton className="h-5 w-3/4 mb-3" />
+                <Skeleton className="h-3.5 w-1/2 mb-4" />
+                <Skeleton className="h-2 w-full rounded-full mb-2" />
+                <div className="flex justify-between">
+                  <Skeleton className="h-3.5 w-12" />
+                  <Skeleton className="h-3.5 w-12" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : markets.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-8 text-center text-ink-500">
             <p className="text-lg font-medium text-ink-900 mb-1">No markets yet</p>

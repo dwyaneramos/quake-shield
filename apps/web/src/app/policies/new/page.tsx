@@ -24,6 +24,7 @@ import { previewBuy } from "@/lib/marketMath";
 import { getExplorerUrl } from "@/lib/chains";
 import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
 import { SCALE } from "@/types";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const MAX_COVERAGE_DNZD = 10_000;
 
@@ -218,7 +219,14 @@ function MarketPositionCard() {
       </p>
 
       {isLoading ? (
-        <p className="text-sm text-ink-500">Loading markets…</p>
+        <div className="space-y-3">
+          <Skeleton className="h-9 w-full rounded-lg" />
+          <Skeleton className="h-2 w-full rounded-full" />
+          <div className="flex gap-2">
+            <Skeleton className="h-9 flex-1 rounded-lg" />
+            <Skeleton className="h-9 flex-1 rounded-lg" />
+          </div>
+        </div>
       ) : openMarkets.length === 0 ? (
         <p className="text-sm text-ink-500">
           No open markets on this network yet.

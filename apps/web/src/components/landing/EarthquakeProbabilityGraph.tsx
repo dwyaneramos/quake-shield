@@ -47,10 +47,12 @@ export default function EarthquakeProbabilityGraph({
   selectedCity,
   onCityChange,
   minMagnitude,
+  settingsPanel,
 }: {
   selectedCity: string;
   onCityChange: (id: string) => void;
   minMagnitude: number;
+  settingsPanel?: React.ReactNode;
 }) {
   const router = useRouter();
 
@@ -87,19 +89,25 @@ export default function EarthquakeProbabilityGraph({
   const yMax = Math.max(dataMax * 1.3, 0.001);
 
   return (
-    <div className="w-full max-w-5xl mx-auto">
+    <div className={`w-full mx-auto ${settingsPanel ? "max-w-6xl" : "max-w-5xl"}`}>
       {/* City Selector */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-ink-900">Seismic Activity Trend</h2>
-          <p className="text-ink-500 text-sm mt-1">
-            {city?.name ?? "..."} &middot; 30-day probability based on GeoNet data
+          <p className="text-ink-500 text-sm font-medium uppercase tracking-wider mb-1">
+            Seismic Activity Trend
+          </p>
+          <h2 className="text-3xl font-black text-ink-900 tracking-tight">
+            {city?.name ?? "..."}
+          </h2>
+          <p className="text-ink-400 text-sm mt-1">
+            30-day probability based on GeoNet data
           </p>
         </div>
       </div>
 
       {/* Main Probability Display + Chart */}
-      <div className="bg-white border border-ink-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <div className="flex-1 min-w-0 bg-white border border-ink-200 rounded-2xl overflow-hidden shadow-sm">
         <div className="px-8 pt-8 pb-4 flex items-end gap-6">
           <div className="flex-1">
             <p className="text-ink-500 text-sm font-medium uppercase tracking-wider">
@@ -227,6 +235,10 @@ export default function EarthquakeProbabilityGraph({
           </div>
           <p className="text-ink-400">Data from GeoNet &middot; Updated every {GEONET.POLL_INTERVAL_MS / 1000}s</p>
         </div>
+      </div>
+      {settingsPanel && (
+        <div className="w-full lg:w-[260px] shrink-0">{settingsPanel}</div>
+      )}
       </div>
     </div>
   );
