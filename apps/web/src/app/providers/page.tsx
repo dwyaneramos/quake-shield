@@ -41,7 +41,7 @@ export default function ProvidersPage() {
 
   const handleDeposit = async () => {
     if (depositNum <= 0) return;
-    await deposit(SCALE.todnzd(depositNum)).catch(() => {});
+    await deposit(SCALE.toDNZD(depositNum)).catch(() => {});
   };
 
   const handleWithdraw = async () => {
@@ -98,7 +98,7 @@ export default function ProvidersPage() {
               label="Pool Balance"
               value={
                 stats
-                  ? `${SCALE.fromdnzd(stats.balance).toLocaleString()} dnzd`
+                  ? `${SCALE.fromDNZD(stats.balance).toLocaleString()} dnzd`
                   : "--"
               }
             />
@@ -106,7 +106,7 @@ export default function ProvidersPage() {
               label="Active Coverage"
               value={
                 stats
-                  ? `${SCALE.fromdnzd(
+                  ? `${SCALE.fromDNZD(
                       stats.totalActiveCoverage,
                     ).toLocaleString()} dnzd`
                   : "--"
@@ -170,7 +170,7 @@ export default function ProvidersPage() {
                   <span className="text-ink-600">Current Value</span>
                   <span className="font-bold text-ink-900">
                     {position
-                      ? `${SCALE.fromdnzd(
+                      ? `${SCALE.fromDNZD(
                           position.currentValue,
                         ).toLocaleString()} dnzd`
                       : "0 dnzd"}
