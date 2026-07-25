@@ -8,7 +8,7 @@ export const QUAKESHIELD_ABI = [
     "inputs": [
       {
         "internalType": "address",
-        "name": "_usdc",
+        "name": "_dnzd",
         "type": "address"
       }
     ],
@@ -52,6 +52,50 @@ export const QUAKESHIELD_ABI = [
     ],
     "name": "SafeERC20FailedOperation",
     "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "provider",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "sharesMinted",
+        "type": "uint256"
+      }
+    ],
+    "name": "CapitalDeposited",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "provider",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "CapitalWithdrawn",
+    "type": "event"
   },
   {
     "anonymous": false,
@@ -185,6 +229,32 @@ export const QUAKESHIELD_ABI = [
     "type": "event"
   },
   {
+    "inputs": [],
+    "name": "MAX_COVERAGE_PER_POLICY",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MIN_RESERVE_RATIO_BPS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -220,6 +290,19 @@ export const QUAKESHIELD_ABI = [
         "type": "uint256"
       }
     ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "deposit",
+    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -322,6 +405,40 @@ export const QUAKESHIELD_ABI = [
         "internalType": "uint256",
         "name": "_activePolicies",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_totalActiveCoverage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_totalShares",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "provider",
+        "type": "address"
+      }
+    ],
+    "name": "getProviderInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currentValue",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -385,6 +502,19 @@ export const QUAKESHIELD_ABI = [
       {
         "internalType": "uint256",
         "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getReserveRatio",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "reserveRatioBps",
         "type": "uint256"
       }
     ],
@@ -521,6 +651,25 @@ export const QUAKESHIELD_ABI = [
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "providerShares",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "magnitude",
         "type": "uint256"
@@ -623,6 +772,19 @@ export const QUAKESHIELD_ABI = [
   },
   {
     "inputs": [],
+    "name": "totalActiveCoverage",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "totalPayouts",
     "outputs": [
       {
@@ -648,6 +810,19 @@ export const QUAKESHIELD_ABI = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "totalShares",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -662,7 +837,7 @@ export const QUAKESHIELD_ABI = [
   },
   {
     "inputs": [],
-    "name": "usdc",
+    "name": "dnzd",
     "outputs": [
       {
         "internalType": "contract IERC20",
@@ -698,12 +873,19 @@ export const QUAKESHIELD_ABI = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "withdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "stateMutability": "payable",
     "type": "receive"
   }
 ] as const;
 
-export const MOCK_USDC_ABI = [
+export const MOCK_DNZD_ABI = [
   {
     "inputs": [],
     "stateMutability": "nonpayable",
@@ -1228,11 +1410,11 @@ export const EARTHQUAKE_MARKET_ABI = [
 ] as const;
 
 // Contract addresses are per-chain — QuakeShield is deployed separately to
-// Sepolia and Fuji, so there's a distinct MockUSDC/QuakeShield pair on each.
+// Sepolia and Fuji, so there's a distinct MockDNZD/QuakeShield pair on each.
 // Set after deployment in the root .env.
 export interface ChainContracts {
   QUAKESHIELD_ADDRESS: `0x${string}` | "";
-  USDC_ADDRESS: `0x${string}` | "";
+  DNZD_ADDRESS: `0x${string}` | "";
   DEPLOY_BLOCK: bigint;
   EARTHQUAKE_MARKET_ADDRESS: `0x${string}` | "";
   EARTHQUAKE_MARKET_DEPLOY_BLOCK: bigint;
@@ -1241,14 +1423,14 @@ export interface ChainContracts {
 export const CONTRACTS_BY_CHAIN: Record<number, ChainContracts> = {
   [sepolia.id]: {
     QUAKESHIELD_ADDRESS: (process.env.NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
-    USDC_ADDRESS: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
+    DNZD_ADDRESS: (process.env.NEXT_PUBLIC_DNZD_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
     DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_QUAKE_SHIELD_DEPLOY_BLOCK_SEPOLIA || "0"),
     EARTHQUAKE_MARKET_ADDRESS: (process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
     EARTHQUAKE_MARKET_DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_DEPLOY_BLOCK_SEPOLIA || "0"),
   },
   [avalancheFuji.id]: {
     QUAKESHIELD_ADDRESS: (process.env.NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_FUJI || "") as `0x${string}` | "",
-    USDC_ADDRESS: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_FUJI || "") as `0x${string}` | "",
+    DNZD_ADDRESS: (process.env.NEXT_PUBLIC_DNZD_ADDRESS_FUJI || "") as `0x${string}` | "",
     DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_QUAKE_SHIELD_DEPLOY_BLOCK_FUJI || "0"),
     EARTHQUAKE_MARKET_ADDRESS: (process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_ADDRESS_FUJI || "") as `0x${string}` | "",
     EARTHQUAKE_MARKET_DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_DEPLOY_BLOCK_FUJI || "0"),
@@ -1257,7 +1439,7 @@ export const CONTRACTS_BY_CHAIN: Record<number, ChainContracts> = {
 
 const EMPTY_CONTRACTS: ChainContracts = {
   QUAKESHIELD_ADDRESS: "",
-  USDC_ADDRESS: "",
+  DNZD_ADDRESS: "",
   DEPLOY_BLOCK: 0n,
   EARTHQUAKE_MARKET_ADDRESS: "",
   EARTHQUAKE_MARKET_DEPLOY_BLOCK: 0n,
@@ -1269,5 +1451,5 @@ export function getContracts(chainId: number | undefined): ChainContracts {
 
 export function isChainConfigured(chainId: number | undefined): boolean {
   const contracts = getContracts(chainId);
-  return Boolean(contracts.QUAKESHIELD_ADDRESS && contracts.USDC_ADDRESS);
+  return Boolean(contracts.QUAKESHIELD_ADDRESS && contracts.DNZD_ADDRESS);
 }

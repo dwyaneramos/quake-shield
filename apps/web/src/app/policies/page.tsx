@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAccount, useChainId } from "wagmi";
 import { ConnectButton } from "@/components/web3/ConnectButton";
-import { Header } from "@/components/layout/Header";
 import { useUserPolicies } from "@/lib/hooks/useQuakeShield";
 import { useClaims } from "@/lib/hooks/useClaims";
 import { getContracts } from "@/lib/contracts";
@@ -63,8 +62,6 @@ export default function PoliciesPage() {
 
   return (
     <div className="min-h-screen bg-ink-50">
-      <Header />
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-ink-900">Policies &amp; Claims</h1>
@@ -164,8 +161,8 @@ export default function PoliciesPage() {
                     <div className="divide-y divide-ink-100">
                       {filtered.map((policy) => {
                         const magnitude = SCALE.fromMagnitude(policy.triggerMagnitude);
-                        const coverage = SCALE.fromUSDC(policy.coverageAmount);
-                        const premium = SCALE.fromUSDC(policy.premiumPaid);
+                        const coverage = SCALE.fromDNZD(policy.coverageAmount);
+                        const premium = SCALE.fromDNZD(policy.premiumPaid);
                         const lat = SCALE.fromLatLng(policy.centerLat);
                         const lng = SCALE.fromLatLng(policy.centerLng);
                         const status = policy.hasPaidOut
@@ -211,10 +208,10 @@ export default function PoliciesPage() {
 
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-sm text-ink-500">
                                   <span>
-                                    Coverage: <strong className="text-ink-700">{coverage.toLocaleString()} USDC</strong>
+                                    Coverage: <strong className="text-ink-700">{coverage.toLocaleString()} DNZD</strong>
                                   </span>
                                   <span>
-                                    Premium: <strong className="text-ink-700">{premium.toLocaleString()} USDC</strong>
+                                    Premium: <strong className="text-ink-700">{premium.toLocaleString()} DNZD</strong>
                                   </span>
                                   <span>
                                     Radius: <strong className="text-ink-700">{policy.radiusKm.toString()} km</strong>
@@ -288,7 +285,7 @@ export default function PoliciesPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-ink-900">
-                              {SCALE.fromUSDC(claim.amount).toLocaleString()} USDC paid out
+                              {SCALE.fromDNZD(claim.amount).toLocaleString()} DNZD paid out
                             </p>
                             <p className="text-sm text-ink-500">
                               {getMagnitudeLabel(magnitude)} quake · Policy #{claim.policyId.toString()} · Block{" "}

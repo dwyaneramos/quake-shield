@@ -25,7 +25,7 @@ export function usePoolStats() {
   const { data, isLoading, refetch } = useReadContract({
     ...contract,
     functionName: "getPoolStats",
-    query: { enabled: configured, refetchInterval: 15_000 },
+    query: { enabled: configured, refetchInterval: 30_000 },
   });
 
   const stats: PoolStats | undefined = data
@@ -34,6 +34,8 @@ export function usePoolStats() {
         totalPayouts: data[1],
         balance: data[2],
         activePolicies: data[3],
+        totalActiveCoverage: data[4],
+        totalShares: data[5],
       }
     : undefined;
 

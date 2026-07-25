@@ -34,7 +34,7 @@ async function pollAndRecord(): Promise<void> {
         );
         submittedQuakes.add(quake.publicID);
         newQuakes++;
-        console.log(`[Poller] Recorded earthquake ${quake.publicID} (M${quake.magnitude})`);
+        console.log(`[Poller] Recorded M${quake.magnitude} earthquake ${quake.publicID}`);
       } catch (error) {
         console.error(`[Poller] Failed to record ${quake.publicID}:`, error);
       }

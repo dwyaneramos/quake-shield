@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAccount, useChainId } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { Header } from "@/components/layout/Header";
 import { getContracts } from "@/lib/contracts";
 import { getExplorerUrl } from "@/lib/chains";
 import { useMarket } from "@/lib/hooks/useMarkets";
@@ -51,7 +50,6 @@ export default function MarketDetailPage() {
   if (!marketsConfigured) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="bg-quake-50 border border-quake-200 text-quake-800 rounded-xl p-4 text-sm">
             EarthquakeMarket isn&rsquo;t deployed on this network yet — switch
@@ -66,7 +64,6 @@ export default function MarketDetailPage() {
   if (isLoading || !market) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 text-center text-ink-500">
           Loading market…
         </main>
@@ -74,7 +71,7 @@ export default function MarketDetailPage() {
     );
   }
 
-  const amountIn = SCALE.toUSDC(Number(amount) || 0);
+  const amountIn = SCALE.toDNZD(Number(amount) || 0);
   const previewShares = previewBuy(market.yesReserve, market.noReserve, amountIn, side === "yes");
   const yesPct = SCALE.fromOdds(market.yesPrice) * 100;
   const noPct = 100 - yesPct;
@@ -106,8 +103,6 @@ export default function MarketDetailPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex justify-between items-start gap-3 mb-2">
           <h1 className="text-2xl font-bold text-ink-900">{market.description}</h1>
@@ -142,11 +137,11 @@ export default function MarketDetailPage() {
             <div className="grid grid-cols-2 gap-3 text-sm bg-ink-50 rounded-lg p-4 border border-ink-100">
               <div>
                 <p className="text-ink-500">Your YES shares</p>
-                <p className="font-semibold text-ink-900">{SCALE.fromUSDC(yesShares).toLocaleString()}</p>
+                <p className="font-semibold text-ink-900">{SCALE.fromDNZD(yesShares).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-ink-500">Your NO shares</p>
-                <p className="font-semibold text-ink-900">{SCALE.fromUSDC(noShares).toLocaleString()}</p>
+                <p className="font-semibold text-ink-900">{SCALE.fromDNZD(noShares).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -158,7 +153,7 @@ export default function MarketDetailPage() {
                 {canRedeem ? (
                   <>
                     <p className="text-sm text-ink-600 mb-4">
-                      You hold {SCALE.fromUSDC(winningShares).toLocaleString()} winning shares, redeemable 1:1.
+                      You hold {SCALE.fromDNZD(winningShares).toLocaleString()} winning shares, redeemable 1:1.
                     </p>
                     <button
                       onClick={handleRedeem}
@@ -222,7 +217,7 @@ export default function MarketDetailPage() {
                   <div className="flex justify-between">
                     <span className="text-ink-500">Estimated shares</span>
                     <span className="font-semibold text-ink-900">
-                      {SCALE.fromUSDC(previewShares).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                      {SCALE.fromDNZD(previewShares).toLocaleString(undefined, { maximumFractionDigits: 4 })}
                     </span>
                   </div>
                 </div>

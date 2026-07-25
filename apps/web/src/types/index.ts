@@ -48,6 +48,14 @@ export interface PoolStats {
   totalPayouts: bigint;
   balance: bigint;
   activePolicies: bigint;
+  totalActiveCoverage: bigint;
+  totalShares: bigint;
+}
+
+// Capital provider position
+export interface ProviderPosition {
+  shares: bigint;
+  currentValue: bigint;
 }
 
 // Earthquake event from contract
@@ -124,16 +132,16 @@ export const SCALE = {
   fromLatLng: (scaled: bigint): number => Number(scaled) / 1_000_000,
 
   /**
-   * Convert USDC amount (human) to contract amount (6 decimals)
+   * Convert DNZD amount (human) to contract amount (6 decimals)
    * Example: 1000 -> 1000000000n
    */
-  toUSDC: (human: number): bigint => BigInt(Math.round(human * 1_000_000)),
+  toDNZD: (human: number): bigint => BigInt(Math.round(human * 1_000_000)),
 
   /**
-   * Convert contract USDC amount to human amount
+   * Convert contract DNZD amount to human amount
    * Example: 1000000000n -> 1000
    */
-  fromUSDC: (scaled: bigint): number => Number(scaled) / 1_000_000,
+  fromDNZD: (scaled: bigint): number => Number(scaled) / 1_000_000,
 
   /**
    * Convert a CPMM odds/price value (scaled by 1e18, per getMarketPrice) to a
