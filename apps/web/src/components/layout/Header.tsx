@@ -8,8 +8,9 @@ import { ConnectButton } from "@/components/web3/ConnectButton";
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/quakes", label: "Live Quakes" },
+  { href: "/policies", label: "Policies & Claims" },
   { href: "/policies/new", label: "Buy Policy" },
-  { href: "/claims", label: "Claims" },
+  { href: "/markets", label: "Markets" },
 ];
 
 export function Header() {
