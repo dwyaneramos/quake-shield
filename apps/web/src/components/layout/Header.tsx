@@ -10,7 +10,6 @@ const NAV_LINKS = [
   { href: "/quakes", label: "Live Quakes" },
   { href: "/policies", label: "Policies & Claims" },
   { href: "/policies/new", label: "Buy Policy" },
-  { href: "/markets", label: "Markets" },
 ];
 
 export function Header() {

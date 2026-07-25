@@ -25,6 +25,7 @@ import { SCALE } from "@/types";
 import HomeClient from "@/components/landing/HomeClient";
 import DashboardQuakeFeed from "@/components/quakes/DashboardQuakeFeed";
 import MagnitudeSlider from "@/components/landing/MagnitudeSlider";
+import { MarketsSection } from "@/components/dashboard/MarketsSection";
 
 export default function DashboardPage() {
   const { isConnected } = useAccount();
@@ -102,6 +103,9 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
+              {/* Earthquake Markets */}
+              <MarketsSection />
+
               {/* Your Policies */}
               <div className="bg-white rounded-xl shadow-sm border border-ink-100 mb-6">
                 <div className="p-6 border-b border-ink-100 flex justify-between items-center">
