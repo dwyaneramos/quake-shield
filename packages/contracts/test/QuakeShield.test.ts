@@ -5,7 +5,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("QuakeShield", function () {
   let quakeshield: QuakeShield;
-  let dnzd: MockDNZD;
+  let DNZD: MockDNZD;
   let owner: HardhatEthersSigner;
   let oracle: HardhatEthersSigner;
   let user1: HardhatEthersSigner;
@@ -21,33 +21,36 @@ describe("QuakeShield", function () {
   const RADIUS_50KM = 50;
   const COVERAGE_1000_DNZD = 1000000000; // 1000 DNZD (6 decimals)
   const PREMIUM_10_DNZD = 10000000; // 10 DNZD
-  const MAX_COVERAGE = 10000000000; // 10,000 USDC (max per policy)
+  const MAX_COVERAGE = 10000000000; // 10,000 DNZD (max per policy)
 
   beforeEach(async function () {
     [owner, oracle, user1, user2] = await ethers.getSigners();
 
     // Deploy MockDNZD
     const MockDNZD = await ethers.getContractFactory("MockDNZD");
-    dnzd = await MockDNZD.deploy();
+    DNZD = await MockDNZD.deploy();
 
     // Deploy QuakeShield
     const QuakeShield = await ethers.getContractFactory("QuakeShield");
-    quakeshield = await QuakeShield.deploy(await dnzd.getAddress());
+    quakeshield = await QuakeShield.deploy(await DNZD.getAddress());
 
     // Set oracle
     await quakeshield.setOracle(oracle.address);
 
     // Mint DNZD to users
-    await dnzd.mint(user1.address, ethers.parseUnits("100000", 6));
-    await dnzd.mint(user2.address, ethers.parseUnits("100000", 6));
+    await DNZD.mint(user1.address, ethers.parseUnits("100000", 6));
+    await DNZD.mint(user2.address, ethers.parseUnits("100000", 6));
 
-    // Mint DNZD to contract for payouts (1M USDC)
-    await dnzd.mint(await quakeshield.getAddress(), ethers.parseUnits("1000000", 6));
+    // Mint DNZD to contract for payouts (1M DNZD)
+    await DNZD.mint(
+      await quakeshield.getAddress(),
+      ethers.parseUnits("1000000", 6),
+    );
   });
 
   describe("Deployment", function () {
     it("Should set the correct DNZD token", async function () {
-      expect(await quakeshield.dnzd()).to.equal(await dnzd.getAddress());
+      expect(await quakeshield.DNZD()).to.equal(await DNZD.getAddress());
     });
 
     it("Should set the deployer as owner", async function () {
@@ -59,18 +62,28 @@ describe("QuakeShield", function () {
     });
 
     it("Should have correct constants", async function () {
-      expect(await quakeshield.MAX_COVERAGE_PER_POLICY()).to.equal(MAX_COVERAGE);
+      expect(await quakeshield.MAX_COVERAGE_PER_POLICY()).to.equal(
+        MAX_COVERAGE,
+      );
       expect(await quakeshield.MIN_RESERVE_RATIO_BPS()).to.equal(15000);
     });
   });
 
   describe("buyPolicy", function () {
     it("Should allow user to buy a policy", async function () {
-      await dnzd.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
 
       const tx = await quakeshield
         .connect(user1)
-        .buyPolicy(COVERAGE_1000_DNZD, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       const receipt = await tx.wait();
       expect(receipt?.status).to.equal(1);
@@ -87,102 +100,185 @@ describe("QuakeShield", function () {
     it("Should charge correct premium (1%)", async function () {
       const expectedPremium = COVERAGE_1000_DNZD / 100;
 
-      await dnzd.connect(user1).approve(await quakeshield.getAddress(), expectedPremium);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), expectedPremium);
 
-      const balanceBefore = await dnzd.balanceOf(user1.address);
+      const balanceBefore = await DNZD.balanceOf(user1.address);
       await quakeshield
         .connect(user1)
-        .buyPolicy(COVERAGE_1000_DNZD, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
-      const balanceAfter = await dnzd.balanceOf(user1.address);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
+      const balanceAfter = await DNZD.balanceOf(user1.address);
 
       expect(balanceBefore - balanceAfter).to.equal(expectedPremium);
     });
 
     it("Should emit PolicyPurchased event", async function () {
-      await dnzd.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
 
       await expect(
         quakeshield
           .connect(user1)
-          .buyPolicy(COVERAGE_1000_DNZD, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM)
+          .buyPolicy(
+            COVERAGE_1000_DNZD,
+            MAGNITUDE_6_0,
+            LAT_WELLINGTON,
+            LNG_WELLINGTON,
+            RADIUS_50KM,
+          ),
       )
         .to.emit(quakeshield, "PolicyPurchased")
-        .withArgs(0, user1.address, COVERAGE_1000_DNZD, COVERAGE_1000_DNZD / 100);
+        .withArgs(
+          0,
+          user1.address,
+          COVERAGE_1000_DNZD,
+          COVERAGE_1000_DNZD / 100,
+        );
     });
 
     it("Should reject coverage below minimum magnitude", async function () {
-      await dnzd.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
 
       await expect(
         quakeshield
           .connect(user1)
-          .buyPolicy(COVERAGE_1000_DNZD, 300, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM)
+          .buyPolicy(
+            COVERAGE_1000_DNZD,
+            300,
+            LAT_WELLINGTON,
+            LNG_WELLINGTON,
+            RADIUS_50KM,
+          ),
       ).to.be.revertedWith("QuakeShield: minimum magnitude is 4.0");
     });
 
     it("Should reject radius over 500km", async function () {
-      await dnzd.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
 
       await expect(
         quakeshield
           .connect(user1)
-          .buyPolicy(COVERAGE_1000_DNZD, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, 501)
+          .buyPolicy(
+            COVERAGE_1000_DNZD,
+            MAGNITUDE_6_0,
+            LAT_WELLINGTON,
+            LNG_WELLINGTON,
+            501,
+          ),
       ).to.be.revertedWith("QuakeShield: radius must be 1-500km");
     });
 
-    it("Should reject coverage exceeding max per policy (10,000 USDC)", async function () {
-      const tooMuchCoverage = ethers.parseUnits("10001", 6); // 10,001 USDC
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), tooMuchCoverage);
+    it("Should reject coverage exceeding max per policy (10,000 DNZD)", async function () {
+      const tooMuchCoverage = ethers.parseUnits("10001", 6); // 10,001 DNZD
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), tooMuchCoverage);
 
       await expect(
         quakeshield
           .connect(user1)
-          .buyPolicy(tooMuchCoverage, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM)
+          .buyPolicy(
+            tooMuchCoverage,
+            MAGNITUDE_6_0,
+            LAT_WELLINGTON,
+            LNG_WELLINGTON,
+            RADIUS_50KM,
+          ),
       ).to.be.revertedWith("QuakeShield: exceeds max coverage");
     });
 
-    it("Should allow coverage exactly at max (10,000 USDC)", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), MAX_COVERAGE);
+    it("Should allow coverage exactly at max (10,000 DNZD)", async function () {
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), MAX_COVERAGE);
 
       const tx = await quakeshield
         .connect(user1)
-        .buyPolicy(MAX_COVERAGE, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          MAX_COVERAGE,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       const receipt = await tx.wait();
       expect(receipt?.status).to.equal(1);
     });
 
     it("Should track totalActiveCoverage", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_USDC);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
       await quakeshield
         .connect(user1)
-        .buyPolicy(COVERAGE_1000_USDC, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
-      expect(await quakeshield.totalActiveCoverage()).to.equal(COVERAGE_1000_USDC);
+      expect(await quakeshield.totalActiveCoverage()).to.equal(
+        COVERAGE_1000_DNZD,
+      );
     });
   });
 
   describe("recordEarthquake", function () {
     beforeEach(async function () {
       // User buys a policy near Wellington
-      await dnzd.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
       await quakeshield
         .connect(user1)
-        .buyPolicy(COVERAGE_1000_DNZD, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
     });
 
     it("Should only allow oracle to record earthquakes", async function () {
       await expect(
         quakeshield
           .connect(user1)
-          .recordEarthquake(MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, 10, "2024p001")
+          .recordEarthquake(
+            MAGNITUDE_6_0,
+            LAT_WELLINGTON,
+            LNG_WELLINGTON,
+            10,
+            "2024p001",
+          ),
       ).to.be.revertedWith("QuakeShield: caller is not the oracle");
     });
 
     it("Should record earthquake event", async function () {
       await quakeshield
         .connect(oracle)
-        .recordEarthquake(MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, 10, "2024p001");
+        .recordEarthquake(
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          10,
+          "2024p001",
+        );
 
       const quake = await quakeshield.getQuake(0);
       expect(quake.magnitude).to.equal(MAGNITUDE_6_0);
@@ -195,20 +291,32 @@ describe("QuakeShield", function () {
       await expect(
         quakeshield
           .connect(oracle)
-          .recordEarthquake(MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, 10, "2024p001")
+          .recordEarthquake(
+            MAGNITUDE_6_0,
+            LAT_WELLINGTON,
+            LNG_WELLINGTON,
+            10,
+            "2024p001",
+          ),
       )
         .to.emit(quakeshield, "QuakeRecorded")
         .withArgs(0, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON);
     });
 
     it("Should pay out if earthquake meets policy trigger", async function () {
-      const balanceBefore = await dnzd.balanceOf(user1.address);
+      const balanceBefore = await DNZD.balanceOf(user1.address);
 
       await quakeshield
         .connect(oracle)
-        .recordEarthquake(MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, 10, "2024p001");
+        .recordEarthquake(
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          10,
+          "2024p001",
+        );
 
-      const balanceAfter = await dnzd.balanceOf(user1.address);
+      const balanceAfter = await DNZD.balanceOf(user1.address);
       expect(balanceAfter - balanceBefore).to.equal(COVERAGE_1000_DNZD);
 
       // Policy should now be inactive
@@ -218,23 +326,31 @@ describe("QuakeShield", function () {
     });
 
     it("Should reduce totalActiveCoverage after payout", async function () {
-      expect(await quakeshield.totalActiveCoverage()).to.equal(COVERAGE_1000_USDC);
+      expect(await quakeshield.totalActiveCoverage()).to.equal(
+        COVERAGE_1000_DNZD,
+      );
 
       await quakeshield
         .connect(oracle)
-        .recordEarthquake(MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, 10, "2024p001");
+        .recordEarthquake(
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          10,
+          "2024p001",
+        );
 
       expect(await quakeshield.totalActiveCoverage()).to.equal(0);
     });
 
     it("Should not pay out if earthquake is below trigger magnitude", async function () {
-      const balanceBefore = await dnzd.balanceOf(user1.address);
+      const balanceBefore = await DNZD.balanceOf(user1.address);
 
       await quakeshield
         .connect(oracle)
         .recordEarthquake(500, LAT_WELLINGTON, LNG_WELLINGTON, 10, "2024p002");
 
-      const balanceAfter = await dnzd.balanceOf(user1.address);
+      const balanceAfter = await DNZD.balanceOf(user1.address);
       expect(balanceAfter).to.equal(balanceBefore);
 
       const policy = await quakeshield.getPolicy(0);
@@ -242,13 +358,19 @@ describe("QuakeShield", function () {
     });
 
     it("Should not pay out if earthquake is outside radius", async function () {
-      const balanceBefore = await dnzd.balanceOf(user1.address);
+      const balanceBefore = await DNZD.balanceOf(user1.address);
 
       await quakeshield
         .connect(oracle)
-        .recordEarthquake(MAGNITUDE_7_0, LAT_CHRISTCHURCH, LNG_CHRISTCHURCH, 10, "2024p003");
+        .recordEarthquake(
+          MAGNITUDE_7_0,
+          LAT_CHRISTCHURCH,
+          LNG_CHRISTCHURCH,
+          10,
+          "2024p003",
+        );
 
-      const balanceAfter = await dnzd.balanceOf(user1.address);
+      const balanceAfter = await DNZD.balanceOf(user1.address);
       expect(balanceAfter).to.equal(balanceBefore);
 
       const policy = await quakeshield.getPolicy(0);
@@ -258,33 +380,57 @@ describe("QuakeShield", function () {
 
   describe("Pool Stats", function () {
     it("Should track premiums correctly", async function () {
-      await dnzd.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
       await quakeshield
         .connect(user1)
-        .buyPolicy(COVERAGE_1000_DNZD, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       const stats = await quakeshield.getPoolStats();
       expect(stats._totalPremiums).to.equal(PREMIUM_10_DNZD);
     });
 
     it("Should count active policies", async function () {
-      await dnzd.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
       await quakeshield
         .connect(user1)
-        .buyPolicy(COVERAGE_1000_DNZD, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       const stats = await quakeshield.getPoolStats();
       expect(stats._activePolicies).to.equal(1);
     });
 
     it("Should return totalActiveCoverage in pool stats", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_USDC);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
       await quakeshield
         .connect(user1)
-        .buyPolicy(COVERAGE_1000_DNZD, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       const stats = await quakeshield.getPoolStats();
-      expect(stats._totalActiveCoverage).to.equal(COVERAGE_1000_USDC);
+      expect(stats._totalActiveCoverage).to.equal(COVERAGE_1000_DNZD);
     });
 
     it("Should return totalShares in pool stats", async function () {
@@ -294,51 +440,61 @@ describe("QuakeShield", function () {
   });
 
   describe("Capital Providers", function () {
-    const DEPOSIT_10000_USDC = ethers.parseUnits("10000", 6);
+    const DEPOSIT_10000_DNZD = ethers.parseUnits("10000", 6);
 
     it("Should accept deposits and mint shares", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
 
-      const tx = await quakeshield.connect(user1).deposit(DEPOSIT_10000_USDC);
+      const tx = await quakeshield.connect(user1).deposit(DEPOSIT_10000_DNZD);
       const receipt = await tx.wait();
       expect(receipt?.status).to.equal(1);
 
       // First depositor gets 1:1 shares
       const [shares, value] = await quakeshield.getProviderInfo(user1.address);
-      expect(shares).to.equal(DEPOSIT_10000_USDC);
+      expect(shares).to.equal(DEPOSIT_10000_DNZD);
       // Value includes proportional share of entire pool (1M mint + 10K deposit)
-      expect(value).to.be.gte(DEPOSIT_10000_USDC);
+      expect(value).to.be.gte(DEPOSIT_10000_DNZD);
     });
 
     it("Should emit CapitalDeposited event", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
 
-      await expect(quakeshield.connect(user1).deposit(DEPOSIT_10000_USDC))
+      await expect(quakeshield.connect(user1).deposit(DEPOSIT_10000_DNZD))
         .to.emit(quakeshield, "CapitalDeposited")
-        .withArgs(user1.address, DEPOSIT_10000_USDC, DEPOSIT_10000_USDC);
+        .withArgs(user1.address, DEPOSIT_10000_DNZD, DEPOSIT_10000_DNZD);
     });
 
     it("Should mint proportional shares for second depositor", async function () {
-      // First deposit: 10,000 USDC → 10,000 shares
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
-      await quakeshield.connect(user1).deposit(DEPOSIT_10000_USDC);
+      // First deposit: 10,000 DNZD → 10,000 shares
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
+      await quakeshield.connect(user1).deposit(DEPOSIT_10000_DNZD);
 
-      // Second deposit: 10,000 USDC into pool worth 10,000 (contract had 1M + 10K = 1.01M)
+      // Second deposit: 10,000 DNZD into pool worth 10,000 (contract had 1M + 10K = 1.01M)
       // shares = (10000 * 10000) / 1010000 = ~99 shares
-      await usdc.connect(user2).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
-      await quakeshield.connect(user2).deposit(DEPOSIT_10000_USDC);
+      await DNZD
+        .connect(user2)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
+      await quakeshield.connect(user2).deposit(DEPOSIT_10000_DNZD);
 
       const [shares2] = await quakeshield.getProviderInfo(user2.address);
       expect(shares2).to.be.gt(0);
     });
 
     it("Should allow full withdrawal", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
-      await quakeshield.connect(user1).deposit(DEPOSIT_10000_USDC);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
+      await quakeshield.connect(user1).deposit(DEPOSIT_10000_DNZD);
 
-      const balanceBefore = await usdc.balanceOf(user1.address);
+      const balanceBefore = await DNZD.balanceOf(user1.address);
       await quakeshield.connect(user1).withdraw();
-      const balanceAfter = await usdc.balanceOf(user1.address);
+      const balanceAfter = await DNZD.balanceOf(user1.address);
 
       expect(balanceAfter - balanceBefore).to.be.gt(0);
 
@@ -347,30 +503,47 @@ describe("QuakeShield", function () {
     });
 
     it("Should emit CapitalWithdrawn event", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
-      await quakeshield.connect(user1).deposit(DEPOSIT_10000_USDC);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
+      await quakeshield.connect(user1).deposit(DEPOSIT_10000_DNZD);
 
-      await expect(quakeshield.connect(user1).withdraw()).to.emit(quakeshield, "CapitalWithdrawn");
+      await expect(quakeshield.connect(user1).withdraw()).to.emit(
+        quakeshield,
+        "CapitalWithdrawn",
+      );
     });
 
     it("Should reject withdrawal if no shares", async function () {
-      await expect(quakeshield.connect(user1).withdraw()).to.be.revertedWith("QuakeShield: no shares");
+      await expect(quakeshield.connect(user1).withdraw()).to.be.revertedWith(
+        "QuakeShield: no shares",
+      );
     });
 
     it("Should yield premiums to capital providers", async function () {
-      // Deposit 100K USDC as capital provider
+      // Deposit 100K DNZD as capital provider
       const bigDeposit = ethers.parseUnits("100000", 6);
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), bigDeposit);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), bigDeposit);
       await quakeshield.connect(user1).deposit(bigDeposit);
 
       // Get value before policy purchase
       const [, valueBefore] = await quakeshield.getProviderInfo(user1.address);
 
-      // User2 buys a policy (premium = 1% of 1000 = 10 USDC goes into pool)
-      await usdc.connect(user2).approve(await quakeshield.getAddress(), COVERAGE_1000_USDC);
+      // User2 buys a policy (premium = 1% of 1000 = 10 DNZD goes into pool)
+      await DNZD
+        .connect(user2)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
       await quakeshield
         .connect(user2)
-        .buyPolicy(COVERAGE_1000_USDC, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       // Provider's value should increase (premium added to pool, same shares)
       const [, valueAfter] = await quakeshield.getProviderInfo(user1.address);
@@ -381,29 +554,42 @@ describe("QuakeShield", function () {
       // This test needs a fresh contract WITHOUT the 1M seed mint
       // Deploy a separate QuakeShield with minimal funds
       const QuakeShield = await ethers.getContractFactory("QuakeShield");
-      const miniShield = await QuakeShield.deploy(await usdc.getAddress());
+      const miniShield = await QuakeShield.deploy(await DNZD.getAddress());
       await miniShield.setOracle(oracle.address);
 
-      // Mint only 200 USDC to the mini contract
-      await usdc.mint(await miniShield.getAddress(), ethers.parseUnits("200", 6));
+      // Mint only 200 DNZD to the mini contract
+      await DNZD.mint(
+        await miniShield.getAddress(),
+        ethers.parseUnits("200", 6),
+      );
 
-      // user1 deposits 200 USDC → gets 200 shares (1:1, first deposit)
-      await usdc.connect(user1).approve(await miniShield.getAddress(), ethers.parseUnits("200", 6));
+      // user1 deposits 200 DNZD → gets 200 shares (1:1, first deposit)
+      await DNZD
+        .connect(user1)
+        .approve(await miniShield.getAddress(), ethers.parseUnits("200", 6));
       await miniShield.connect(user1).deposit(ethers.parseUnits("200", 6));
 
-      // user2 buys policy with 100 USDC coverage
-      // After: pool = 200.1 USDC, coverage = 100, ratio = 20010%
-      await usdc.connect(user2).approve(await miniShield.getAddress(), ethers.parseUnits("100", 6));
+      // user2 buys policy with 100 DNZD coverage
+      // After: pool = 200.1 DNZD, coverage = 100, ratio = 20010%
+      await DNZD
+        .connect(user2)
+        .approve(await miniShield.getAddress(), ethers.parseUnits("100", 6));
       await miniShield
         .connect(user2)
-        .buyPolicy(ethers.parseUnits("100", 6), MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          ethers.parseUnits("100", 6),
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       // user1 tries to withdraw — should fail because:
-      // withdrawAmount = (200 * 200.1) / 200 = 200.1 USDC
+      // withdrawAmount = (200 * 200.1) / 200 = 200.1 DNZD
       // newPoolValue = 200.1 - 200.1 = 0
       // ratio = 0 / 100 = 0% < 150%
       await expect(miniShield.connect(user1).withdraw()).to.be.revertedWith(
-        "QuakeShield: would break reserve ratio"
+        "QuakeShield: would break reserve ratio",
       );
     });
   });
@@ -415,14 +601,22 @@ describe("QuakeShield", function () {
     });
 
     it("Should calculate correct reserve ratio", async function () {
-      // Pool has 1M USDC from mint
-      // Buy 1000 USDC policy → totalActiveCoverage = 1000
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_USDC);
+      // Pool has 1M DNZD from mint
+      // Buy 1000 DNZD policy → totalActiveCoverage = 1000
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
       await quakeshield
         .connect(user1)
-        .buyPolicy(COVERAGE_1000_DNZD, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
-      // Pool now has 1,000,010 USDC (1M + 10 premium)
+      // Pool now has 1,000,010 DNZD (1M + 10 premium)
       // Reserve ratio = 1,000,010 * 10000 / 1000 = 10,000,100,000 (100,001%)
       const ratio = await quakeshield.getReserveRatio();
       expect(ratio).to.be.gt(15000); // Well above 150%
@@ -431,35 +625,53 @@ describe("QuakeShield", function () {
     it("Should block policy when reserve ratio too low", async function () {
       // We need to make the pool nearly depleted
       // First, let's set up: deposit small amount, then try to buy large coverage
-      const smallDeposit = ethers.parseUnits("160", 6); // 160 USDC
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), smallDeposit);
+      const smallDeposit = ethers.parseUnits("160", 6); // 160 DNZD
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), smallDeposit);
       await quakeshield.connect(user1).deposit(smallDeposit);
 
-      // Try to buy 100 USDC coverage (reserve would be ~1,016,010 / 100 = very high)
-      // Actually, the 1M USDC minted to contract makes this hard to test
+      // Try to buy 100 DNZD coverage (reserve would be ~1,016,010 / 100 = very high)
+      // Actually, the 1M DNZD minted to contract makes this hard to test
       // The reserve ratio check: (poolBalance * 10000) / newTotalCoverage >= 15000
       // With 1M in pool and 1000 coverage: (1,000,010 * 10000) / 1000 = 10,000,100,000 >> 15000
 
       // Let's test the check is actually working by verifying the error message
       // We can't easily get reserve ratio low enough with 1M in pool
       // So let's just verify the check exists by buying the max we can
-      await usdc.connect(user2).approve(await quakeshield.getAddress(), MAX_COVERAGE);
+      await DNZD
+        .connect(user2)
+        .approve(await quakeshield.getAddress(), MAX_COVERAGE);
       await quakeshield
         .connect(user2)
-        .buyPolicy(MAX_COVERAGE, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          MAX_COVERAGE,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       // Verify totalActiveCoverage updated
       expect(await quakeshield.totalActiveCoverage()).to.equal(MAX_COVERAGE);
     });
 
     it("Should return totalActiveCoverage in pool stats", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_USDC);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
       await quakeshield
         .connect(user1)
-        .buyPolicy(COVERAGE_1000_USDC, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       const stats = await quakeshield.getPoolStats();
-      expect(stats._totalActiveCoverage).to.equal(COVERAGE_1000_USDC);
+      expect(stats._totalActiveCoverage).to.equal(COVERAGE_1000_DNZD);
     });
 
     it("Should return totalShares in pool stats", async function () {
@@ -469,51 +681,61 @@ describe("QuakeShield", function () {
   });
 
   describe("Capital Providers", function () {
-    const DEPOSIT_10000_USDC = ethers.parseUnits("10000", 6);
+    const DEPOSIT_10000_DNZD = ethers.parseUnits("10000", 6);
 
     it("Should accept deposits and mint shares", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
 
-      const tx = await quakeshield.connect(user1).deposit(DEPOSIT_10000_USDC);
+      const tx = await quakeshield.connect(user1).deposit(DEPOSIT_10000_DNZD);
       const receipt = await tx.wait();
       expect(receipt?.status).to.equal(1);
 
       // First depositor gets 1:1 shares
       const [shares, value] = await quakeshield.getProviderInfo(user1.address);
-      expect(shares).to.equal(DEPOSIT_10000_USDC);
+      expect(shares).to.equal(DEPOSIT_10000_DNZD);
       // Value includes proportional share of entire pool (1M mint + 10K deposit)
-      expect(value).to.be.gte(DEPOSIT_10000_USDC);
+      expect(value).to.be.gte(DEPOSIT_10000_DNZD);
     });
 
     it("Should emit CapitalDeposited event", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
 
-      await expect(quakeshield.connect(user1).deposit(DEPOSIT_10000_USDC))
+      await expect(quakeshield.connect(user1).deposit(DEPOSIT_10000_DNZD))
         .to.emit(quakeshield, "CapitalDeposited")
-        .withArgs(user1.address, DEPOSIT_10000_USDC, DEPOSIT_10000_USDC);
+        .withArgs(user1.address, DEPOSIT_10000_DNZD, DEPOSIT_10000_DNZD);
     });
 
     it("Should mint proportional shares for second depositor", async function () {
-      // First deposit: 10,000 USDC → 10,000 shares
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
-      await quakeshield.connect(user1).deposit(DEPOSIT_10000_USDC);
+      // First deposit: 10,000 DNZD → 10,000 shares
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
+      await quakeshield.connect(user1).deposit(DEPOSIT_10000_DNZD);
 
-      // Second deposit: 10,000 USDC into pool worth 10,000 (contract had 1M + 10K = 1.01M)
+      // Second deposit: 10,000 DNZD into pool worth 10,000 (contract had 1M + 10K = 1.01M)
       // shares = (10000 * 10000) / 1010000 = ~99 shares
-      await usdc.connect(user2).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
-      await quakeshield.connect(user2).deposit(DEPOSIT_10000_USDC);
+      await DNZD
+        .connect(user2)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
+      await quakeshield.connect(user2).deposit(DEPOSIT_10000_DNZD);
 
       const [shares2] = await quakeshield.getProviderInfo(user2.address);
       expect(shares2).to.be.gt(0);
     });
 
     it("Should allow full withdrawal", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
-      await quakeshield.connect(user1).deposit(DEPOSIT_10000_USDC);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
+      await quakeshield.connect(user1).deposit(DEPOSIT_10000_DNZD);
 
-      const balanceBefore = await usdc.balanceOf(user1.address);
+      const balanceBefore = await DNZD.balanceOf(user1.address);
       await quakeshield.connect(user1).withdraw();
-      const balanceAfter = await usdc.balanceOf(user1.address);
+      const balanceAfter = await DNZD.balanceOf(user1.address);
 
       expect(balanceAfter - balanceBefore).to.be.gt(0);
 
@@ -522,30 +744,47 @@ describe("QuakeShield", function () {
     });
 
     it("Should emit CapitalWithdrawn event", async function () {
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), DEPOSIT_10000_USDC);
-      await quakeshield.connect(user1).deposit(DEPOSIT_10000_USDC);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), DEPOSIT_10000_DNZD);
+      await quakeshield.connect(user1).deposit(DEPOSIT_10000_DNZD);
 
-      await expect(quakeshield.connect(user1).withdraw()).to.emit(quakeshield, "CapitalWithdrawn");
+      await expect(quakeshield.connect(user1).withdraw()).to.emit(
+        quakeshield,
+        "CapitalWithdrawn",
+      );
     });
 
     it("Should reject withdrawal if no shares", async function () {
-      await expect(quakeshield.connect(user1).withdraw()).to.be.revertedWith("QuakeShield: no shares");
+      await expect(quakeshield.connect(user1).withdraw()).to.be.revertedWith(
+        "QuakeShield: no shares",
+      );
     });
 
     it("Should yield premiums to capital providers", async function () {
-      // Deposit 100K USDC as capital provider
+      // Deposit 100K DNZD as capital provider
       const bigDeposit = ethers.parseUnits("100000", 6);
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), bigDeposit);
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), bigDeposit);
       await quakeshield.connect(user1).deposit(bigDeposit);
 
       // Get value before policy purchase
       const [, valueBefore] = await quakeshield.getProviderInfo(user1.address);
 
-      // User2 buys a policy (premium = 1% of 1000 = 10 USDC goes into pool)
-      await usdc.connect(user2).approve(await quakeshield.getAddress(), COVERAGE_1000_USDC);
+      // User2 buys a policy (premium = 1% of 1000 = 10 DNZD goes into pool)
+      await DNZD
+        .connect(user2)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
       await quakeshield
         .connect(user2)
-        .buyPolicy(COVERAGE_1000_USDC, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       // Provider's value should increase (premium added to pool, same shares)
       const [, valueAfter] = await quakeshield.getProviderInfo(user1.address);
@@ -556,29 +795,42 @@ describe("QuakeShield", function () {
       // This test needs a fresh contract WITHOUT the 1M seed mint
       // Deploy a separate QuakeShield with minimal funds
       const QuakeShield = await ethers.getContractFactory("QuakeShield");
-      const miniShield = await QuakeShield.deploy(await usdc.getAddress());
+      const miniShield = await QuakeShield.deploy(await DNZD.getAddress());
       await miniShield.setOracle(oracle.address);
 
-      // Mint only 200 USDC to the mini contract
-      await usdc.mint(await miniShield.getAddress(), ethers.parseUnits("200", 6));
+      // Mint only 200 DNZD to the mini contract
+      await DNZD.mint(
+        await miniShield.getAddress(),
+        ethers.parseUnits("200", 6),
+      );
 
-      // user1 deposits 200 USDC → gets 200 shares (1:1, first deposit)
-      await usdc.connect(user1).approve(await miniShield.getAddress(), ethers.parseUnits("200", 6));
+      // user1 deposits 200 DNZD → gets 200 shares (1:1, first deposit)
+      await DNZD
+        .connect(user1)
+        .approve(await miniShield.getAddress(), ethers.parseUnits("200", 6));
       await miniShield.connect(user1).deposit(ethers.parseUnits("200", 6));
 
-      // user2 buys policy with 100 USDC coverage
-      // After: pool = 200.1 USDC, coverage = 100, ratio = 20010%
-      await usdc.connect(user2).approve(await miniShield.getAddress(), ethers.parseUnits("100", 6));
+      // user2 buys policy with 100 DNZD coverage
+      // After: pool = 200.1 DNZD, coverage = 100, ratio = 20010%
+      await DNZD
+        .connect(user2)
+        .approve(await miniShield.getAddress(), ethers.parseUnits("100", 6));
       await miniShield
         .connect(user2)
-        .buyPolicy(ethers.parseUnits("100", 6), MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          ethers.parseUnits("100", 6),
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       // user1 tries to withdraw — should fail because:
-      // withdrawAmount = (200 * 200.1) / 200 = 200.1 USDC
+      // withdrawAmount = (200 * 200.1) / 200 = 200.1 DNZD
       // newPoolValue = 200.1 - 200.1 = 0
       // ratio = 0 / 100 = 0% < 150%
       await expect(miniShield.connect(user1).withdraw()).to.be.revertedWith(
-        "QuakeShield: would break reserve ratio"
+        "QuakeShield: would break reserve ratio",
       );
     });
   });
@@ -590,14 +842,22 @@ describe("QuakeShield", function () {
     });
 
     it("Should calculate correct reserve ratio", async function () {
-      // Pool has 1M USDC from mint
-      // Buy 1000 USDC policy → totalActiveCoverage = 1000
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), COVERAGE_1000_USDC);
+      // Pool has 1M DNZD from mint
+      // Buy 1000 DNZD policy → totalActiveCoverage = 1000
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), COVERAGE_1000_DNZD);
       await quakeshield
         .connect(user1)
-        .buyPolicy(COVERAGE_1000_USDC, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          COVERAGE_1000_DNZD,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
-      // Pool now has 1,000,010 USDC (1M + 10 premium)
+      // Pool now has 1,000,010 DNZD (1M + 10 premium)
       // Reserve ratio = 1,000,010 * 10000 / 1000 = 10,000,100,000 (100,001%)
       const ratio = await quakeshield.getReserveRatio();
       expect(ratio).to.be.gt(15000); // Well above 150%
@@ -606,22 +866,32 @@ describe("QuakeShield", function () {
     it("Should block policy when reserve ratio too low", async function () {
       // We need to make the pool nearly depleted
       // First, let's set up: deposit small amount, then try to buy large coverage
-      const smallDeposit = ethers.parseUnits("160", 6); // 160 USDC
-      await usdc.connect(user1).approve(await quakeshield.getAddress(), smallDeposit);
+      const smallDeposit = ethers.parseUnits("160", 6); // 160 DNZD
+      await DNZD
+        .connect(user1)
+        .approve(await quakeshield.getAddress(), smallDeposit);
       await quakeshield.connect(user1).deposit(smallDeposit);
 
-      // Try to buy 100 USDC coverage (reserve would be ~1,016,010 / 100 = very high)
-      // Actually, the 1M USDC minted to contract makes this hard to test
+      // Try to buy 100 DNZD coverage (reserve would be ~1,016,010 / 100 = very high)
+      // Actually, the 1M DNZD minted to contract makes this hard to test
       // The reserve ratio check: (poolBalance * 10000) / newTotalCoverage >= 15000
       // With 1M in pool and 1000 coverage: (1,000,010 * 10000) / 1000 = 10,000,100,000 >> 15000
 
       // Let's test the check is actually working by verifying the error message
       // We can't easily get reserve ratio low enough with 1M in pool
       // So let's just verify the check exists by buying the max we can
-      await usdc.connect(user2).approve(await quakeshield.getAddress(), MAX_COVERAGE);
+      await DNZD
+        .connect(user2)
+        .approve(await quakeshield.getAddress(), MAX_COVERAGE);
       await quakeshield
         .connect(user2)
-        .buyPolicy(MAX_COVERAGE, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, RADIUS_50KM);
+        .buyPolicy(
+          MAX_COVERAGE,
+          MAGNITUDE_6_0,
+          LAT_WELLINGTON,
+          LNG_WELLINGTON,
+          RADIUS_50KM,
+        );
 
       // Verify totalActiveCoverage updated
       expect(await quakeshield.totalActiveCoverage()).to.equal(MAX_COVERAGE);
@@ -635,7 +905,8 @@ describe("QuakeShield", function () {
     });
 
     it("Should not allow non-owner to update oracle", async function () {
-      await expect(quakeshield.connect(user1).setOracle(user2.address)).to.be.reverted;
+      await expect(quakeshield.connect(user1).setOracle(user2.address)).to.be
+        .reverted;
     });
   });
 });

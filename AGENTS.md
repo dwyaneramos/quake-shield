@@ -170,7 +170,7 @@ pnpm hardhat test --grep "buyPolicy"  # Run specific test
 
 ### Manual Testing Flow
 1. Deploy contracts to Sepolia and/or Fuji
-2. Mint test DNZD: `dnzd.mint(yourAddress, 100000000)` (100 DNZD)
+2. Mint test DNZD: `DNZD.mint(yourAddress, 100000000)` (100 DNZD)
 3. Start frontend, connect wallet, switch to the chain you deployed to
 4. Buy a policy
 5. Start the matching oracle instance, wait for a real earthquake OR manually call `recordEarthquake()` via Hardhat console

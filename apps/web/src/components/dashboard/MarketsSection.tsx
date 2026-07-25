@@ -8,6 +8,7 @@ import { getExplorerUrl } from "@/lib/chains";
 import { useMarkets } from "@/lib/hooks/useMarkets";
 import { useBuyShares } from "@/lib/hooks/useBuyShares";
 import { SCALE } from "@/types";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 function timeUntil(resolutionTime: bigint): string {
   const diff = Number(resolutionTime) - Date.now() / 1000;
@@ -155,9 +156,19 @@ export function MarketsSection() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-ink-500 py-8 bg-white rounded-xl shadow-sm border border-ink-100">
-          Loading markets…
-        </p>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl shadow-sm border border-ink-100 p-5">
+              <Skeleton className="h-5 w-3/4 mb-2" />
+              <Skeleton className="h-3.5 w-1/2 mb-3" />
+              <Skeleton className="h-2 w-full rounded-full mb-3" />
+              <div className="flex gap-2">
+                <Skeleton className="h-7 flex-1 rounded-lg" />
+                <Skeleton className="h-7 flex-1 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : markets.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-8 text-center text-ink-500">
           <p>No markets yet. Check back once markets are created for this network.</p>

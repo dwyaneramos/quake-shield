@@ -1,28 +1,44 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { MOCK_USDC_ABI, QUAKESHIELD_ABI, getContracts, isChainConfigured } from "@/lib/contracts";
+import {
+  useAccount,
+  useChainId,
+  usePublicClient,
+  useReadContract,
+  useWriteContract,
+} from "wagmi";
+import {
+  MOCK_DNZD_ABI,
+  QUAKESHIELD_ABI,
+  getContracts,
+  isChainConfigured,
+} from "@/lib/contracts";
 import type { ProviderPosition } from "@/types";
 
-export type DepositStep = "idle" | "approving" | "depositing" | "done" | "error";
+export type DepositStep =
+  | "idle"
+  | "approving"
+  | "depositing"
+  | "done"
+  | "error";
 
-/** Deposit USDC as a capital provider (approve + deposit). */
+/** Deposit DNZD as a capital provider (approve + deposit). */
 export function useDeposit() {
   const { address } = useAccount();
   const chainId = useChainId();
-  const { QUAKESHIELD_ADDRESS, USDC_ADDRESS } = getContracts(chainId);
+  const { QUAKESHIELD_ADDRESS, DNZD_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
   const [step, setStep] = useState<DepositStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: USDC_ADDRESS as `0x${string}`,
-    abi: MOCK_USDC_ABI,
+    address: DNZD_ADDRESS as `0x${string}`,
+    abi: MOCK_DNZD_ABI,
     functionName: "allowance",
     args: address ? [address, QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
-    query: { enabled: Boolean(address && USDC_ADDRESS) },
+    query: { enabled: Boolean(address && DNZD_ADDRESS) },
   });
 
   const { writeContractAsync } = useWriteContract();
@@ -39,8 +55,8 @@ export function useDeposit() {
         if (currentAllowance < amount) {
           setStep("approving");
           const approveHash = await writeContractAsync({
-            address: USDC_ADDRESS as `0x${string}`,
-            abi: MOCK_USDC_ABI,
+            address: DNZD_ADDRESS as `0x${string}`,
+            abi: MOCK_DNZD_ABI,
             functionName: "approve",
             args: [QUAKESHIELD_ADDRESS as `0x${string}`, amount],
           });
@@ -65,7 +81,14 @@ export function useDeposit() {
         throw e;
       }
     },
-    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, USDC_ADDRESS]
+    [
+      allowance,
+      publicClient,
+      refetchAllowance,
+      writeContractAsync,
+      QUAKESHIELD_ADDRESS,
+      DNZD_ADDRESS,
+    ],
   );
 
   return {
@@ -87,7 +110,9 @@ export function useWithdraw() {
   const chainId = useChainId();
   const { QUAKESHIELD_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
-  const [step, setStep] = useState<"idle" | "withdrawing" | "done" | "error">("idle");
+  const [step, setStep] = useState<"idle" | "withdrawing" | "done" | "error">(
+    "idle",
+  );
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
 
