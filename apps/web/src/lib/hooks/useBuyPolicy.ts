@@ -54,7 +54,10 @@ export function useBuyPolicy() {
             functionName: "approve",
             args: [QUAKESHIELD_ADDRESS as `0x${string}`, premium],
           });
-          await publicClient.waitForTransactionReceipt({ hash: approveHash });
+          const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash });
+          if (approveReceipt.status !== "success") {
+            throw new Error("The approval transaction reverted on-chain.");
+          }
           await refetchAllowance();
         }
 
@@ -66,7 +69,10 @@ export function useBuyPolicy() {
           args: [input.coverageAmount, input.triggerMagnitude, input.centerLat, input.centerLng, input.radiusKm],
         });
         setBuyTxHash(hash);
-        await publicClient.waitForTransactionReceipt({ hash });
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status !== "success") {
+          throw new Error("The transaction reverted on-chain.");
+        }
 
         setStep("done");
       } catch (e) {

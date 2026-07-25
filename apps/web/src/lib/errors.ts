@@ -19,5 +19,8 @@ export function getFriendlyTxErrorMessage(e: unknown): string {
     }
     return e.shortMessage ?? "Transaction failed. Please try again.";
   }
+  if (e instanceof Error && e.message.includes("reverted on-chain")) {
+    return "The transaction was mined but reverted on-chain — no funds were deducted for a valid policy. This is often caused by insufficient token balance or allowance.";
+  }
   return "Transaction failed. Please try again.";
 }
