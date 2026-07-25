@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { GEONET } from "@/lib/polygon";
+import { GEONET } from "@/lib/chains";
 import { haversineDistanceKm, getMagnitudeLabel } from "@quakeshield/shared";
 import type { GeoNetQuake } from "@/types";
 

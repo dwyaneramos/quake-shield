@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAccount, useChainId } from "wagmi";
 import { ConnectButton } from "@/components/web3/ConnectButton";
-import { Header } from "@/components/layout/Header";
 import { isChainConfigured } from "@/lib/contracts";
 import { useDeposit, useMyPosition, useWithdraw } from "@/lib/hooks/useCapitalProvider";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
@@ -43,8 +42,6 @@ export default function ProvidersPage() {
 
   return (
     <div className="min-h-screen bg-ink-50">
-      <Header />
-
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>

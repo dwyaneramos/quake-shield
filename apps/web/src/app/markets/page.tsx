@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useAccount, useChainId } from "wagmi";
-import { Header } from "@/components/layout/Header";
 import { ConnectButton } from "@/components/web3/ConnectButton";
 import { getContracts } from "@/lib/contracts";
 import { useMarkets } from "@/lib/hooks/useMarkets";
@@ -29,8 +28,6 @@ export default function MarketsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <h1 className="text-3xl font-bold text-ink-900 mb-2">Earthquake Markets</h1>
         <p className="text-ink-600 mb-8">

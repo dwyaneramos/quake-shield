@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAccount, useChainId } from "wagmi";
 import { ConnectButton } from "@/components/web3/ConnectButton";
-import { Header } from "@/components/layout/Header";
 import { useUserPolicies } from "@/lib/hooks/useQuakeShield";
 import { useClaims } from "@/lib/hooks/useClaims";
 import { getContracts } from "@/lib/contracts";
@@ -63,8 +62,6 @@ export default function PoliciesPage() {
 
   return (
     <div className="min-h-screen bg-ink-50">
-      <Header />
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-ink-900">Policies &amp; Claims</h1>

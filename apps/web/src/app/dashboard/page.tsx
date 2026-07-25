@@ -17,7 +17,6 @@ function getMagnitudeLabel(magnitude: number): string {
   return labels[Math.floor(magnitude)] || "Great";
 }
 import { ConnectButton } from "@/components/web3/ConnectButton";
-import { Header } from "@/components/layout/Header";
 import { isChainConfigured } from "@/lib/contracts";
 import { usePoolStats, useUserPolicies } from "@/lib/hooks/useQuakeShield";
 import { SCALE } from "@/types";
@@ -32,8 +31,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Seismic Graph + City Widgets */}
         <HomeClient />

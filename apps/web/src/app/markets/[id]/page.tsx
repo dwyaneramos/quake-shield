@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAccount, useChainId } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { Header } from "@/components/layout/Header";
 import { getContracts } from "@/lib/contracts";
 import { getExplorerUrl } from "@/lib/chains";
 import { useMarket } from "@/lib/hooks/useMarkets";
@@ -70,7 +69,6 @@ export default function MarketDetailPage() {
   if (!marketsConfigured) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="bg-quake-50 border border-quake-200 text-quake-800 rounded-xl p-4 text-sm">
             EarthquakeMarket isn&rsquo;t deployed on this network yet — switch
@@ -85,7 +83,6 @@ export default function MarketDetailPage() {
   if (isLoading || !market) {
     return (
       <div className="min-h-screen bg-white">
-        <Header />
         <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 text-center text-ink-500">
           Loading market…
         </main>
@@ -125,8 +122,6 @@ export default function MarketDetailPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex justify-between items-start gap-3 mb-2">
           <h1 className="text-2xl font-bold text-ink-900">{market.description}</h1>

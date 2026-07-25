@@ -14,7 +14,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Header } from "@/components/layout/Header";
 import { isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
@@ -409,7 +408,6 @@ function BuyPolicyForm() {
 export default function BuyPolicyPage() {
   return (
     <div className="min-h-screen bg-white">
-      <Header />
       <Suspense>
         <BuyPolicyForm />
       </Suspense>
