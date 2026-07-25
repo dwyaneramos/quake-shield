@@ -17,9 +17,7 @@ export type BuyPolicyStep = "idle" | "approving" | "buying" | "done" | "error";
 export interface BuyPolicyInput {
   coverageAmount: bigint; // DNZD, 6 decimals
   triggerMagnitude: bigint; // x100
-  centerLat: bigint; // x1e6
-  centerLng: bigint; // x1e6
-  radiusKm: bigint;
+  regionId: bigint; // Index into the shared NZ_REGIONS table, matching the on-chain region registry
   recurring: boolean; // fortnightly premium plan vs one-off
 }
 
@@ -88,9 +86,7 @@ export function useBuyPolicy() {
           args: [
             input.coverageAmount,
             input.triggerMagnitude,
-            input.centerLat,
-            input.centerLng,
-            input.radiusKm,
+            input.regionId,
             input.recurring,
           ] as const,
         };

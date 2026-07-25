@@ -36,9 +36,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         uint256 coverageAmount;
         uint256 premiumPaid;
         uint256 triggerMagnitude; // Scaled by 100 (600 = 6.0)
-        int256 centerLat;         // Scaled by 1e6 (-41285800 = -41.2858°)
-        int256 centerLng;         // Scaled by 1e6 (174778000 = 174.778°)
-        uint256 radiusKm;         // Trigger radius in km
+        uint256 regionId;         // Covered region — same registry investors back, see `regions`
         bool isActive;
         bool hasPaidOut;
         uint256 createdAt;
@@ -106,6 +104,9 @@ contract QuakeShield is Ownable, ReentrancyGuard {
     uint256 public totalActiveCoverage;
     uint256 public constant MAX_COVERAGE_PER_POLICY = 10_000e6; // 10,000 DNZD
     uint256 public constant MIN_RESERVE_RATIO_BPS = 15000;      // 150% (15000 basis points)
+
+    /// @notice Coverage window for a policy — 14 days, matching the fortnightly premium plan.
+    uint256 public constant RENEWAL_PERIOD = 14 days;
 
     // ============ Investment State ============
 
@@ -448,12 +449,11 @@ contract QuakeShield is Ownable, ReentrancyGuard {
     // ============ User Functions ============
 
     /**
-     * @notice Buy an earthquake insurance policy
+     * @notice Buy an earthquake insurance policy over a region
      * @param coverageAmount Payout amount in DNZD (6 decimals)
      * @param triggerMagnitude Minimum magnitude to trigger payout (scaled by 100)
-     * @param centerLat Center latitude (scaled by 1e6)
-     * @param centerLng Center longitude (scaled by 1e6)
-     * @param radiusKm Radius in km from center
+     * @param regionId Region to cover — the same registry investors back, so a policy
+     *        pays out on exactly the quakes that also interrupt that region's investors
      * @param recurring If true, premium is billed every RENEWAL_PERIOD via renewPolicy() instead of once.
      *        Either way coverage only runs for RENEWAL_PERIOD from purchase — a one-off policy simply
      *        cannot be renewed, so it lapses at periodEnd, while a recurring policy keeps extending.
@@ -462,15 +462,13 @@ contract QuakeShield is Ownable, ReentrancyGuard {
     function buyPolicy(
         uint256 coverageAmount,
         uint256 triggerMagnitude,
-        int256 centerLat,
-        int256 centerLng,
-        uint256 radiusKm,
+        uint256 regionId,
         bool recurring
     ) external nonReentrant returns (uint256) {
         require(coverageAmount > 0, "QuakeShield: coverage must be > 0");
         require(coverageAmount <= MAX_COVERAGE_PER_POLICY, "QuakeShield: exceeds max coverage");
         require(triggerMagnitude >= 500, "QuakeShield: minimum magnitude is 5.0");
-        require(radiusKm > 0 && radiusKm <= 500, "QuakeShield: radius must be 1-500km");
+        require(regionId < regions.length, "QuakeShield: unknown region");
 
         // Solvency check: pool must have 150% reserve ratio after this policy
         uint256 poolBalance = DNZD.balanceOf(address(this));
@@ -492,9 +490,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
             coverageAmount: coverageAmount,
             premiumPaid: premium,
             triggerMagnitude: triggerMagnitude,
-            centerLat: centerLat,
-            centerLng: centerLng,
-            radiusKm: radiusKm,
+            regionId: regionId,
             isActive: true,
             hasPaidOut: false,
             createdAt: block.timestamp,
@@ -994,6 +990,9 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     /**
      * @notice Process claims against an earthquake event
+     * @dev A policy triggers on exactly the same test that flags its region for
+     *      investors (`_isInRegion`) — the region a policyholder buys cover in is
+     *      the same region whose investors are on the hook for the payout.
      */
     function _processClaims(
         uint256 magnitude,
@@ -1006,54 +1005,19 @@ contract QuakeShield is Ownable, ReentrancyGuard {
             if (!p.isActive || p.hasPaidOut) continue;
             if (block.timestamp > p.periodEnd) continue;
             if (magnitude < p.triggerMagnitude) continue;
+            if (!_isInRegion(regions[p.regionId], quakeLat, quakeLng)) continue;
 
-            // Calculate distance between policy center and quake epicenter
-            int256 latDiff = p.centerLat - quakeLat;
-            int256 lngDiff = p.centerLng - quakeLng;
+            p.hasPaidOut = true;
+            p.isActive = false;
+            totalPayouts += p.coverageAmount;
+            totalActiveCoverage -= p.coverageAmount;
 
-            // Rough distance calculation (1 degree ≈ 111km)
-            // This is simplified for MVP; production would use Haversine
-            uint256 distKmSq = _approxDistanceKmSquared(latDiff, lngDiff);
-            uint256 radiusSq = p.radiusKm * p.radiusKm;
+            // The capital backing this ground funds the payout.
+            _chargeLoss(p.coverageAmount, quakeLat, quakeLng);
 
-            if (distKmSq <= radiusSq) {
-                p.hasPaidOut = true;
-                p.isActive = false;
-                totalPayouts += p.coverageAmount;
-                totalActiveCoverage -= p.coverageAmount;
-
-                // The capital backing this ground funds the payout.
-                _chargeLoss(p.coverageAmount, quakeLat, quakeLng);
-
-                DNZD.safeTransfer(p.policyholder, p.coverageAmount);
-                emit PayoutExecuted(i, p.policyholder, p.coverageAmount, magnitude);
-            }
+            DNZD.safeTransfer(p.policyholder, p.coverageAmount);
+            emit PayoutExecuted(i, p.policyholder, p.coverageAmount, magnitude);
         }
-    }
-
-    /**
-     * @notice Approximate squared distance in km from lat/lng differences
-     */
-    function _approxDistanceKmSquared(
-        int256 latDiff,
-        int256 lngDiff
-    ) internal pure returns (uint256) {
-        // 1 degree latitude ≈ 111km
-        // 1 degree longitude ≈ 111km * cos(average latitude)
-        // For NZ (lat ~-41°), cos(41°) ≈ 0.75
-        // Simplified: use 111km for lat, 83km for lng
-
-        int256 kmPerDegLat = 111000000; // 111km * 1e6
-        int256 kmPerDegLng = 83000000;  // 83km * 1e6
-
-        // latDiff/lngDiff are in units of 1e-6 degrees
-        // Multiply by kmPerDeg to get km * 1e6
-        // Divide by 1e6 to get km (integer)
-        int256 distLat = (latDiff * kmPerDegLat) / 1000000000000; // 1e6 * 1e6 / 1e12
-        int256 distLng = (lngDiff * kmPerDegLng) / 1000000000000;
-
-        // Return squared distance in km²
-        return uint256(distLat * distLat + distLng * distLng);
     }
 
     receive() external payable {}

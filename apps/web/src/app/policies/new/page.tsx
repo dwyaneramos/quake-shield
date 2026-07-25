@@ -18,9 +18,10 @@ import {
 import { isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
+import { useRegions } from "@/lib/hooks/useInvestments";
 import { getExplorerUrl } from "@/lib/chains";
-import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
-import { getRegionForCity, getNearestRegion } from "@/lib/nzRegions";
+import { NZ_CITIES } from "@/lib/cities";
+import { NZ_REGIONS, regionsForPoint, regionCenter } from "@quakeshield/shared";
 import { SCALE } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -34,65 +35,84 @@ const RegionMap = dynamic(
 
 const MAX_COVERAGE_DNZD = 10_000;
 
-// Policies trigger on any GeoNet quake M5.0+ within CITY_RADIUS_KM of the
-// chosen region — not user-configurable, so risk terms stay consistent
-// across the pool.
+// Policies trigger on any GeoNet quake M5.0+ whose epicenter falls inside the
+// chosen region's box — the exact same test that governs that region's
+// investors, so a policy and the capital backing it always agree on what
+// counts as "this region got hit." Not user-configurable, so risk terms stay
+// consistent across the pool.
 const TRIGGER_MAGNITUDE = 5.0;
 
-const REGIONS = NZ_CITIES.map((c) => ({
-  label: c.name,
-  id: c.id,
-  lat: c.lat,
-  lng: c.lng,
-}));
+interface RegionOption {
+  regionId: number;
+  id: string;
+  name: string;
+  island: string;
+}
+
+const REGION_OPTIONS: RegionOption[] = NZ_REGIONS.map((r, i) => ({
+  regionId: i,
+  id: r.id,
+  name: r.name,
+  island: r.island,
+})).sort((a, b) => a.name.localeCompare(b.name));
+
+/** ?city= is kept for old links (dashboard widgets, city graphs) — resolve it to the region that contains that city. */
+function regionIdForCityId(cityId: string): number | null {
+  const city = NZ_CITIES.find((c) => c.id === cityId);
+  if (!city) return null;
+  const [region] = regionsForPoint(city.lat, city.lng);
+  if (!region) return null;
+  const index = NZ_REGIONS.findIndex((r) => r.id === region.id);
+  return index >= 0 ? index : null;
+}
 
 interface TrendPoint {
   time: string;
-  probability: number;
   quakeCount: number;
   maxMagnitude: number;
 }
 
-interface CityData {
-  currentProbability: number;
-  recentQuakeCount: number;
+interface RegionSeismicData {
+  quakeCount: number;
+  maxMagnitude: number;
+  estimatedRiskScoreBps: number;
   trend: TrendPoint[];
 }
 
-function CityMiniGraph({ cityId }: { cityId: string }) {
-  const [data, setData] = useState<CityData | null>(null);
+function RegionMiniGraph({ regionSlug }: { regionSlug: string }) {
+  const [data, setData] = useState<RegionSeismicData | null>(null);
 
-  const fetchCity = useCallback(async () => {
+  const fetchRegion = useCallback(async () => {
     try {
-      const res = await fetch(`/api/geonet/city?city=${cityId}`);
-      if (res.ok) setData(await res.json());
+      const res = await fetch(`/api/geonet/regions?region=${regionSlug}`);
+      if (res.ok) {
+        const json = await res.json();
+        setData(json.regions ?? null);
+      }
     } catch {}
-  }, [cityId]);
+  }, [regionSlug]);
 
   useEffect(() => {
-    fetchCity();
-    const i = setInterval(fetchCity, 30000);
+    fetchRegion();
+    const i = setInterval(fetchRegion, 30000);
     return () => clearInterval(i);
-  }, [fetchCity]);
+  }, [fetchRegion]);
 
   const trend = data?.trend ?? [];
-  const prob = data?.currentProbability ?? 0;
-  const dataMax =
-    trend.length > 0 ? Math.max(...trend.map((p) => p.probability)) : 0.01;
-  const yMax = Math.max(dataMax * 1.3, 0.001);
+  const riskPct = (data?.estimatedRiskScoreBps ?? 0) / 100;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-ink-200 overflow-hidden">
       <div className="px-6 pt-6 pb-2">
         <p className="text-ink-500 text-xs font-medium uppercase tracking-wider">
-          30-Day Seismic Trend
+          90-Day Seismic Activity
         </p>
         <div className="flex items-baseline gap-2 mt-1">
           <span className="text-4xl font-black tabular-nums text-shield-600">
-            {prob.toFixed(4)}
+            {riskPct.toFixed(1)}
           </span>
           <span className="text-lg font-bold text-ink-400">%</span>
-          <span className="text-ink-500 text-sm ml-1">M5+ probability</span>
+          <span className="text-ink-500 text-sm ml-1">risk score</span>
         </div>
       </div>
       <div className="px-2 pb-2 h-[180px]">
@@ -120,13 +140,12 @@ function CityMiniGraph({ cityId }: { cityId: string }) {
               tickLine={false}
             />
             <YAxis
-              domain={[0, yMax]}
+              allowDecimals={false}
               stroke="#aab8cc"
               tick={{ fill: "#7c8fab", fontSize: 10 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v: number) => `${v.toFixed(2)}%`}
-              width={50}
+              width={30}
             />
             <Tooltip
               contentStyle={{
@@ -135,14 +154,11 @@ function CityMiniGraph({ cityId }: { cityId: string }) {
                 borderRadius: "8px",
                 fontSize: "12px",
               }}
-              formatter={(value) => [
-                `${Number(value).toFixed(4)}%`,
-                "Probability",
-              ]}
+              formatter={(value) => [`${value}`, "Quakes"]}
             />
             <Area
               type="monotone"
-              dataKey="probability"
+              dataKey="quakeCount"
               stroke="#15805c"
               strokeWidth={2}
               fill="url(#buyGrad)"
@@ -156,13 +172,15 @@ function CityMiniGraph({ cityId }: { cityId: string }) {
       <div className="px-6 py-3 bg-ink-50/50 border-t border-ink-100 grid grid-cols-3 gap-4 text-center text-xs">
         <div>
           <p className="text-ink-900 font-semibold">
-            {data?.recentQuakeCount ?? "--"}
+            {data?.quakeCount ?? "--"}
           </p>
-          <p className="text-ink-400">quakes past 30d</p>
+          <p className="text-ink-400">quakes past 90d</p>
         </div>
         <div>
-          <p className="text-ink-900 font-semibold">{CITY_RADIUS_KM}km</p>
-          <p className="text-ink-400">radius</p>
+          <p className="text-ink-900 font-semibold">
+            M{data?.maxMagnitude ? data.maxMagnitude.toFixed(1) : "--"}
+          </p>
+          <p className="text-ink-400">largest</p>
         </div>
         <div>
           <p className="text-ink-900 font-semibold">M{magnitudeDisplay}</p>
@@ -178,12 +196,19 @@ const magnitudeDisplay = TRIGGER_MAGNITUDE.toFixed(1);
 function BuyPolicyForm() {
   const searchParams = useSearchParams();
   const initialCity = searchParams.get("city");
+  const initialRegionParam = searchParams.get("region");
 
-  const initialIndex = useMemo(() => {
-    if (!initialCity) return 0;
-    const idx = NZ_CITIES.findIndex((c) => c.id === initialCity);
-    return idx >= 0 ? idx : 0;
-  }, [initialCity]);
+  const initialRegionId = useMemo(() => {
+    if (initialRegionParam) {
+      const idx = NZ_REGIONS.findIndex((r) => r.id === initialRegionParam);
+      if (idx >= 0) return idx;
+    }
+    if (initialCity) {
+      const idx = regionIdForCityId(initialCity);
+      if (idx !== null) return idx;
+    }
+    return 0;
+  }, [initialCity, initialRegionParam]);
 
   const { isConnected } = useAccount();
   const chainId = useChainId();
@@ -192,27 +217,17 @@ function BuyPolicyForm() {
   const { buyPolicy, step, error, isPending, buyTxHash, reset } =
     useBuyPolicy();
   const { stats } = usePoolStats();
+  const { regions: onChainRegions } = useRegions();
 
   const [paymentPlan, setPaymentPlan] = useState<"onetime" | "recurring">(
     "onetime",
   );
-  const [regionIndex, setRegionIndex] = useState(initialIndex);
-  const [customLat, setCustomLat] = useState("-41.2865");
-  const [customLng, setCustomLng] = useState("174.7762");
+  const [regionId, setRegionId] = useState(initialRegionId);
   const [coverage, setCoverage] = useState("1000");
-  const [customLat, setCustomLat] = useState("-41.2865");
-  const [customLng, setCustomLng] = useState("174.7762");
 
-  const region = REGIONS[regionIndex];
-  const isCustom = region.lat === null;
-  const lat = isCustom ? customLat : String(region.lat);
-  const lng = isCustom ? customLng : String(region.lng);
-  const selectedCityId = isCustom ? "wellington" : region.id;
-  const latNum = Number(lat);
-  const lngNum = Number(lng);
-  const nzRegion = isCustom
-    ? getNearestRegion(latNum, lngNum)
-    : getRegionForCity(region.id);
+  const regionMeta = NZ_REGIONS[regionId];
+  const onChainRegion = onChainRegions.find((r) => r.id === regionId);
+  const center = regionCenter(regionMeta);
 
   const coverageNum = Number(coverage) || 0;
   const premium = coverageNum * 0.01;
@@ -221,8 +236,10 @@ function BuyPolicyForm() {
     if (coverageNum <= 0) return "Coverage must be greater than 0";
     if (coverageNum > MAX_COVERAGE_DNZD)
       return `Maximum coverage is ${MAX_COVERAGE_DNZD.toLocaleString()} DNZD`;
+    if (onChainRegions.length > 0 && !onChainRegion)
+      return "This region isn't registered on-chain yet on the connected network";
     return null;
-  }, [coverageNum]);
+  }, [coverageNum, onChainRegion, onChainRegions.length]);
 
   const canSubmit = isConnected && chainConfigured && !validation && !isPending;
 
@@ -231,9 +248,7 @@ function BuyPolicyForm() {
     await buyPolicy({
       coverageAmount: SCALE.toDNZD(coverageNum),
       triggerMagnitude: SCALE.toMagnitude(TRIGGER_MAGNITUDE),
-      centerLat: SCALE.toLatLng(Number(lat)),
-      centerLng: SCALE.toLatLng(Number(lng)),
-      radiusKm: BigInt(CITY_RADIUS_KM),
+      regionId: BigInt(regionId),
       recurring: paymentPlan === "recurring",
     }).catch(() => {});
   };
@@ -247,7 +262,11 @@ function BuyPolicyForm() {
         <p className="text-ink-600 mb-8">
           Choose your coverage amount and region. Every policy pays out
           automatically on any GeoNet quake M{TRIGGER_MAGNITUDE.toFixed(1)}+
-          within {CITY_RADIUS_KM}km of your region.
+          inside your region &mdash; the same region investors back at{" "}
+          <Link href="/investments" className="text-shield-600 hover:text-shield-700 font-medium">
+            /investments
+          </Link>
+          .
         </p>
 
         {!chainConfigured && (
@@ -364,25 +383,25 @@ function BuyPolicyForm() {
                   </p>
                 </div>
 
-                {/* Location */}
+                {/* Region */}
                 <div>
                   <label className="block text-sm font-medium text-ink-700 mb-2">
                     Coverage Region
                   </label>
                   <select
-                    value={regionIndex}
-                    onChange={(e) => setRegionIndex(Number(e.target.value))}
+                    value={regionId}
+                    onChange={(e) => setRegionId(Number(e.target.value))}
                     className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
                   >
-                    {REGIONS.map((r, i) => (
-                      <option key={r.label} value={i}>
-                        {r.label}
+                    {REGION_OPTIONS.map((r) => (
+                      <option key={r.id} value={r.regionId}>
+                        {r.name} · {r.island}
                       </option>
                     ))}
                   </select>
                   <p className="text-sm text-ink-500 mt-1">
-                    Payout triggers on any qualifying quake within{" "}
-                    {CITY_RADIUS_KM}km of this region.
+                    Payout triggers on any qualifying quake inside this
+                    region&rsquo;s boundary — the same one investors back.
                   </p>
                 </div>
 
@@ -454,13 +473,13 @@ function BuyPolicyForm() {
                   <div className="flex justify-between">
                     <span className="text-ink-500">Trigger</span>
                     <span className="font-medium text-ink-900">
-                      M≥{TRIGGER_MAGNITUDE.toFixed(1)} · {CITY_RADIUS_KM}km
+                      M≥{TRIGGER_MAGNITUDE.toFixed(1)} in region
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-ink-500">Region</span>
                     <span className="font-medium text-ink-900">
-                      {region.label}
+                      {regionMeta.name}
                     </span>
                   </div>
                 </div>
@@ -497,36 +516,35 @@ function BuyPolicyForm() {
               </form>
             </div>
 
-            {/* Right: City Data */}
+            {/* Right: Region Data */}
             <div className="lg:col-span-3">
               <div className="mb-3">
                 <h2 className="text-lg font-bold text-ink-900">
-                  {region.label}
+                  {regionMeta.name}
                 </h2>
                 <p className="text-ink-500 text-sm">
-                  Live seismic data for this area
+                  Live seismic data for this region
                 </p>
               </div>
-              <CityMiniGraph cityId={selectedCityId} />
-              {nzRegion && (
-                <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 mt-6">
-                  <h2 className="text-lg font-bold text-ink-900 mb-1">
-                    {nzRegion.name}
-                  </h2>
-                  <p className="text-ink-500 text-sm mb-4">
-                    Your coverage is centered here. The highlighted area shows
-                    the wider NZ region your pinpoint falls in.
-                  </p>
-                  <div className="rounded-lg overflow-hidden border border-ink-100">
-                    <RegionMap
-                      region={nzRegion}
-                      markerLat={latNum}
-                      markerLng={lngNum}
-                      markerLabel={isCustom ? "Custom location" : region.label}
-                    />
-                  </div>
+              <RegionMiniGraph regionSlug={regionMeta.id} />
+              <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 mt-6">
+                <h2 className="text-lg font-bold text-ink-900 mb-1">
+                  {regionMeta.name} boundary
+                </h2>
+                <p className="text-ink-500 text-sm mb-4">
+                  The highlighted box is exactly the area used to decide
+                  whether a quake struck this region — for policy payouts and
+                  investor returns alike.
+                </p>
+                <div className="rounded-lg overflow-hidden border border-ink-100">
+                  <RegionMap
+                    region={regionMeta}
+                    markerLat={center.lat}
+                    markerLng={center.lng}
+                    markerLabel={regionMeta.name}
+                  />
                 </div>
-              )}
+              </div>
             </div>
           </div>
         )}

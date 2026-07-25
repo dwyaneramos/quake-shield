@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { MOCK_USDC_ABI, QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
+import { DNZD_ABI, QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
 import { getFriendlyTxErrorMessage } from "@/lib/errors";
 
 export type RenewPolicyStep = "idle" | "approving" | "renewing" | "done" | "error";
@@ -19,7 +19,7 @@ export function useRenewPolicy() {
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: DNZD_ADDRESS as `0x${string}`,
-    abi: MOCK_USDC_ABI,
+    abi: DNZD_ABI,
     functionName: "allowance",
     args: address ? [address, QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
     query: { enabled: Boolean(address && DNZD_ADDRESS) },
@@ -42,7 +42,7 @@ export function useRenewPolicy() {
           setStep("approving");
           const approveHash = await writeContractAsync({
             address: DNZD_ADDRESS as `0x${string}`,
-            abi: MOCK_USDC_ABI,
+            abi: DNZD_ABI,
             functionName: "approve",
             args: [QUAKESHIELD_ADDRESS as `0x${string}`, premium],
           });

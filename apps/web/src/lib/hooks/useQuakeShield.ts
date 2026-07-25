@@ -54,7 +54,8 @@ const MOCK_POOL_STATS: PoolStats = {
   balance: 1_850_000_000_000n,      // $1,850,000
   activePolicies: 23n,
   totalActiveCoverage: 1_200_000_000_000n, // $1,200,000
-  totalShares: 42n,
+  totalInvested: 900_000_000_000n,  // $900,000
+  yieldReserve: 45_000_000_000n,    // $45,000
 };
 
 /** Policy IDs owned by the connected wallet, then the full Policy struct for each. */

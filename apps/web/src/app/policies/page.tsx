@@ -9,6 +9,7 @@ import { useClaims } from "@/lib/hooks/useClaims";
 import { useRenewPolicy } from "@/lib/hooks/useRenewPolicy";
 import { getContracts } from "@/lib/contracts";
 import { getExplorerUrl } from "@/lib/chains";
+import { NZ_REGIONS } from "@quakeshield/shared";
 import { SCALE } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -228,8 +229,8 @@ export default function PoliciesPage() {
                         const magnitude = SCALE.fromMagnitude(policy.triggerMagnitude);
                         const coverage = SCALE.fromDNZD(policy.coverageAmount);
                         const premium = SCALE.fromDNZD(policy.premiumPaid);
-                        const lat = SCALE.fromLatLng(policy.centerLat);
-                        const lng = SCALE.fromLatLng(policy.centerLng);
+                        const regionName =
+                          NZ_REGIONS[Number(policy.regionId)]?.name ?? "Unknown region";
                         const status = policy.hasPaidOut
                           ? "paid"
                           : policy.isActive
@@ -288,7 +289,7 @@ export default function PoliciesPage() {
                                   )}
                                 </div>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-sm text-ink-500">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1 text-sm text-ink-500">
                                   <span>
                                     Coverage: <strong className="text-ink-700">{coverage.toLocaleString()} DNZD</strong>
                                   </span>
@@ -296,10 +297,7 @@ export default function PoliciesPage() {
                                     Premium: <strong className="text-ink-700">{premium.toLocaleString()} DNZD</strong>
                                   </span>
                                   <span>
-                                    Radius: <strong className="text-ink-700">{policy.radiusKm.toString()} km</strong>
-                                  </span>
-                                  <span>
-                                    Center: <strong className="text-ink-700">{lat.toFixed(2)}, {lng.toFixed(2)}</strong>
+                                    Region: <strong className="text-ink-700">{regionName}</strong>
                                   </span>
                                 </div>
 

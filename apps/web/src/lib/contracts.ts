@@ -273,6 +273,25 @@ export const QUAKESHIELD_ABI = [
         "internalType": "address",
         "name": "policyholder",
         "type": "address"
+      }
+    ],
+    "name": "PolicyLapsed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "policyId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "policyholder",
+        "type": "address"
       },
       {
         "indexed": false,
@@ -319,25 +338,6 @@ export const QUAKESHIELD_ABI = [
       }
     ],
     "name": "PolicyRenewed",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "policyId",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "policyholder",
-        "type": "address"
-      }
-    ],
-    "name": "PolicyLapsed",
     "type": "event"
   },
   {
@@ -603,6 +603,19 @@ export const QUAKESHIELD_ABI = [
   },
   {
     "inputs": [],
+    "name": "RENEWAL_PERIOD",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "accrueAllRegions",
     "outputs": [
       {
@@ -685,18 +698,8 @@ export const QUAKESHIELD_ABI = [
         "type": "uint256"
       },
       {
-        "internalType": "int256",
-        "name": "centerLat",
-        "type": "int256"
-      },
-      {
-        "internalType": "int256",
-        "name": "centerLng",
-        "type": "int256"
-      },
-      {
         "internalType": "uint256",
-        "name": "radiusKm",
+        "name": "regionId",
         "type": "uint256"
       },
       {
@@ -714,64 +717,6 @@ export const QUAKESHIELD_ABI = [
       }
     ],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "policyId",
-        "type": "uint256"
-      }
-    ],
-    "name": "renewPolicy",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "policyId",
-        "type": "uint256"
-      }
-    ],
-    "name": "lapsePolicy",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "policyId",
-        "type": "uint256"
-      }
-    ],
-    "name": "isPolicyExpired",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "RENEWAL_PERIOD",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -911,18 +856,8 @@ export const QUAKESHIELD_ABI = [
             "type": "uint256"
           },
           {
-            "internalType": "int256",
-            "name": "centerLat",
-            "type": "int256"
-          },
-          {
-            "internalType": "int256",
-            "name": "centerLng",
-            "type": "int256"
-          },
-          {
             "internalType": "uint256",
-            "name": "radiusKm",
+            "name": "regionId",
             "type": "uint256"
           },
           {
@@ -1282,6 +1217,38 @@ export const QUAKESHIELD_ABI = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "policyId",
+        "type": "uint256"
+      }
+    ],
+    "name": "isPolicyExpired",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "policyId",
+        "type": "uint256"
+      }
+    ],
+    "name": "lapsePolicy",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "oracle",
     "outputs": [
@@ -1343,18 +1310,8 @@ export const QUAKESHIELD_ABI = [
         "type": "uint256"
       },
       {
-        "internalType": "int256",
-        "name": "centerLat",
-        "type": "int256"
-      },
-      {
-        "internalType": "int256",
-        "name": "centerLng",
-        "type": "int256"
-      },
-      {
         "internalType": "uint256",
-        "name": "radiusKm",
+        "name": "regionId",
         "type": "uint256"
       },
       {
@@ -1627,6 +1584,19 @@ export const QUAKESHIELD_ABI = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "policyId",
+        "type": "uint256"
+      }
+    ],
+    "name": "renewPolicy",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

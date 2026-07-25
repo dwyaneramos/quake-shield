@@ -21,6 +21,7 @@ function getMagnitudeLabel(magnitude: number): string {
 import { ConnectButton } from "@/components/web3/ConnectButton";
 import { isChainConfigured } from "@/lib/contracts";
 import { usePoolStats, useUserPolicies } from "@/lib/hooks/useQuakeShield";
+import { NZ_REGIONS } from "@quakeshield/shared";
 import { SCALE } from "@/types";
 import HomeClient from "@/components/landing/HomeClient";
 import DashboardQuakeFeed from "@/components/quakes/DashboardQuakeFeed";
@@ -148,6 +149,8 @@ export default function DashboardPage() {
                       const magnitude = SCALE.fromMagnitude(
                         policy.triggerMagnitude,
                       );
+                      const regionName =
+                        NZ_REGIONS[Number(policy.regionId)]?.name ?? "Unknown region";
                       return (
                         <div
                           key={policy.id.toString()}
@@ -159,7 +162,7 @@ export default function DashboardPage() {
                           <div className="flex-1">
                             <p className="font-medium text-ink-900">
                               {getMagnitudeLabel(magnitude)} quake trigger ·{" "}
-                              {policy.radiusKm.toString()}km radius
+                              {regionName}
                             </p>
                             <p className="text-sm text-ink-500">
                               Coverage{" "}

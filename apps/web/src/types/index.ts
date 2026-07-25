@@ -20,9 +20,7 @@ export interface Policy {
   coverageAmount: bigint;
   premiumPaid: bigint;
   triggerMagnitude: bigint;
-  centerLat: bigint;
-  centerLng: bigint;
-  radiusKm: bigint;
+  regionId: bigint;
   isActive: boolean;
   hasPaidOut: boolean;
   createdAt: bigint;
@@ -36,9 +34,7 @@ export interface PolicyDisplay {
   coverageAmount: number;
   premiumPaid: number;
   triggerMagnitude: number;
-  centerLat: number;
-  centerLng: number;
-  radiusKm: number;
+  regionId: number;
   isActive: boolean;
   hasPaidOut: boolean;
   createdAt: Date;

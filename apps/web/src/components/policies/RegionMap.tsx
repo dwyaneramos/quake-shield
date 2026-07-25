@@ -3,9 +3,9 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect } from "react";
 import type { LatLngBoundsExpression } from "leaflet";
-import { MapContainer, Marker, Polygon, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, Marker, Rectangle, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { Icon } from "leaflet";
-import type { NZRegion } from "@/lib/nzRegions";
+import type { NZRegion } from "@quakeshield/shared";
 
 const pinIcon = new Icon({
   iconUrl:
@@ -36,7 +36,13 @@ export function RegionMap({
   markerLng: number;
   markerLabel: string;
 }) {
-  const bounds: LatLngBoundsExpression = region.boundary;
+  // The region's actual coverage box — the same south/north/west/east bounds
+  // the contract and the investment pool use to decide whether a quake struck
+  // here, so what's drawn always matches what's insured.
+  const bounds: LatLngBoundsExpression = [
+    [region.south, region.west],
+    [region.north, region.east],
+  ];
 
   return (
     <MapContainer
@@ -50,8 +56,8 @@ export function RegionMap({
         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
       />
-      <Polygon
-        positions={region.boundary}
+      <Rectangle
+        bounds={bounds}
         pathOptions={{
           color: "#15805c",
           weight: 2,
