@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AreaChart,
   Area,
@@ -49,6 +49,8 @@ export default function EarthquakeProbabilityGraph({
   selectedCity: string;
   onCityChange: (id: string) => void;
 }) {
+  const router = useRouter();
+
   const [data, setData] = useState<CityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,40 +98,73 @@ export default function EarthquakeProbabilityGraph({
       {/* Main Probability Display + Chart */}
       <div className="bg-white border border-ink-200 rounded-2xl overflow-hidden shadow-sm">
         <div className="px-8 pt-8 pb-4 flex items-end gap-6">
-          <div>
+          <div className="flex-1">
             <p className="text-ink-500 text-sm font-medium uppercase tracking-wider">
               M5+ Earthquake Probability
             </p>
-            <div className="flex items-baseline gap-3 mt-2">
-              <span className="text-6xl font-black tabular-nums text-shield-600">
-                {loading ? "--" : `${probability.toFixed(4)}`}
-              </span>
-              <span className="text-2xl font-bold text-ink-400">%</span>
-            </div>
+            {loading ? (
+              <div className="mt-2 space-y-2">
+                <div className="h-10 w-48 bg-ink-100 rounded-lg animate-pulse" />
+                <div className="h-3 w-24 bg-ink-100 rounded animate-pulse" />
+              </div>
+            ) : (
+              <div className="flex items-baseline gap-3 mt-2">
+                <span className="text-6xl font-black tabular-nums text-shield-600">
+                  {probability.toFixed(4)}
+                </span>
+                <span className="text-2xl font-bold text-ink-400">%</span>
+              </div>
+            )}
           </div>
           <div className="pb-2 flex items-center gap-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-ink-900">
-                {loading ? "--" : data?.recentQuakeCount ?? 0}
-              </p>
-              <p className="text-ink-400 text-xs">quakes past 30 days</p>
-            </div>
-            <div className="w-px bg-ink-200" />
-            <div className="text-center">
-              <p className="text-2xl font-bold text-ink-900">{CITY_RADIUS_KM}</p>
-              <p className="text-ink-400 text-xs">km radius</p>
-            </div>
-            <Link
-              href={`/policies/new?city=${selectedCity}`}
+            {loading ? (
+              <>
+                <div className="text-center space-y-1">
+                  <div className="h-6 w-10 bg-ink-100 rounded mx-auto animate-pulse" />
+                  <div className="h-3 w-20 bg-ink-100 rounded mx-auto animate-pulse" />
+                </div>
+                <div className="w-px bg-ink-200" />
+                <div className="text-center space-y-1">
+                  <div className="h-6 w-10 bg-ink-100 rounded mx-auto animate-pulse" />
+                  <div className="h-3 w-12 bg-ink-100 rounded mx-auto animate-pulse" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-ink-900">
+                    {data?.recentQuakeCount ?? 0}
+                  </p>
+                  <p className="text-ink-400 text-xs">quakes past 30 days</p>
+                </div>
+                <div className="w-px bg-ink-200" />
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-ink-900">{CITY_RADIUS_KM}</p>
+                  <p className="text-ink-400 text-xs">km radius</p>
+                </div>
+              </>
+            )}
+            <button
+              onClick={() => router.push(`/policies/new?city=${selectedCity}`)}
               className="ml-2 mb-1 bg-shield-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-shield-700 transition-colors whitespace-nowrap"
             >
               Buy Policy
-            </Link>
+            </button>
           </div>
         </div>
 
         <div className="px-4 pb-4 h-[280px]">
-          {error ? (
+          {loading ? (
+            <div className="h-full flex flex-col justify-end px-4 pb-4 gap-1">
+              {[0.25, 0.4, 0.3, 0.6, 0.5, 0.35, 0.45, 0.55, 0.2, 0.4].map((w, i) => (
+                <div
+                  key={i}
+                  className="h-2 bg-ink-100 rounded-full animate-pulse"
+                  style={{ width: `${w * 100}%`, animationDelay: `${i * 80}ms` }}
+                />
+              ))}
+            </div>
+          ) : error ? (
             <div className="h-full flex items-center justify-center text-ink-400">{error}</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">

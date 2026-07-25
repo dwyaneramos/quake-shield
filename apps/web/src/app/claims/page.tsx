@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { getMagnitudeLabel } from "@quakeshield/shared";
+function getMagnitudeLabel(magnitude: number): string {
+  const labels: Record<number, string> = { 0: "Micro", 1: "Micro", 2: "Micro", 3: "Minor", 4: "Light", 5: "Moderate", 6: "Strong", 7: "Major", 8: "Great" };
+  return labels[Math.floor(magnitude)] || "Great";
+}
 import { ConnectButton } from "@/components/web3/ConnectButton";
 import { Header } from "@/components/layout/Header";
 import { useClaims } from "@/lib/hooks/useClaims";

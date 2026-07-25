@@ -75,12 +75,28 @@ export default function CityWidgets({
                   <span className="text-sm font-semibold text-ink-800 truncate">
                     {city.name}
                   </span>
-                  <span className="text-xs text-ink-400 tabular-nums">
-                    {w ? `${prob.toFixed(2)}%` : "--"}
-                  </span>
+                  {loading ? (
+                    <div className="h-4 w-12 bg-ink-100 rounded animate-pulse" />
+                  ) : (
+                    <span className="text-xs text-ink-400 tabular-nums">
+                      {w ? `${prob.toFixed(2)}%` : "--"}
+                    </span>
+                  )}
                 </div>
                 <div className="h-8 pointer-events-none">
-                  {w && w.trend.length > 0 ? (
+                  {loading ? (
+                    <div className="h-full flex items-center">
+                      <div className="w-full flex gap-1 items-end">
+                        {[0.3, 0.6, 0.4, 0.8, 0.5].map((h, i) => (
+                          <div
+                            key={i}
+                            className="flex-1 bg-ink-100 rounded animate-pulse"
+                            style={{ height: `${h * 100}%`, animationDelay: `${i * 100}ms` }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : w && w.trend.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={w.trend} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                         <defs>
@@ -108,12 +124,16 @@ export default function CityWidgets({
                   )}
                 </div>
                 <div className="mt-1 text-xs text-ink-400">
-                  {w ? `${w.recentQuakeCount} quakes` : "Loading..."}
+                  {loading ? (
+                    <div className="h-3 w-28 bg-ink-100 rounded animate-pulse" />
+                  ) : (
+                    w ? `${w.recentQuakeCount} quakes past 30d` : "No data"
+                  )}
                 </div>
               </button>
               <Link
                 href={`/policies/new?city=${city.id}`}
-                className="mt-2 block w-full text-center text-xs font-medium text-shield-700 bg-shield-50 hover:bg-shield-100 border border-shield-200 rounded-lg py-1.5 transition-colors"
+                className="mt-2 block w-full text-center text-xs font-semibold text-white bg-shield-600 hover:bg-shield-700 rounded-lg py-1.5 transition-colors"
               >
                 Buy Policy
               </Link>

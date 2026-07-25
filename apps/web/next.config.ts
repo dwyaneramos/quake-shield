@@ -20,8 +20,6 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [],
   },
-  // Transpile shared packages from monorepo
-  transpilePackages: ["@quakeshield/shared"],
   turbopack: {
     // Turbopack resolveAlias wants paths relative to the project root.
     resolveAlias: Object.fromEntries(
