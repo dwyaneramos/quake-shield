@@ -14,7 +14,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Header } from "@/components/layout/Header";
 import { isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
 import { getExplorerUrl } from "@/lib/chains";
@@ -201,8 +200,6 @@ function BuyPolicyForm() {
 
   return (
     <div className="min-h-screen bg-ink-50">
-      <Header />
-
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-ink-900 mb-2">Buy Earthquake Policy</h1>
         <p className="text-ink-600 mb-8">Set your trigger conditions and coverage amount.</p>
