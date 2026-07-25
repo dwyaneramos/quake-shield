@@ -12,7 +12,7 @@ export type BuySharesStep = "idle" | "approving" | "buying" | "done" | "error";
 export function useBuyShares() {
   const { address } = useAccount();
   const chainId = useChainId();
-  const { USDC_ADDRESS } = getContracts(chainId);
+  const { DNZD_ADDRESS } = getContracts(chainId);
   const { contract } = useEarthquakeMarketContract();
   const publicClient = usePublicClient();
   const [step, setStep] = useState<BuySharesStep>("idle");
@@ -20,11 +20,11 @@ export function useBuyShares() {
   const [buyTxHash, setBuyTxHash] = useState<`0x${string}` | undefined>();
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: USDC_ADDRESS as `0x${string}`,
+    address: DNZD_ADDRESS as `0x${string}`,
     abi: MOCK_USDC_ABI,
     functionName: "allowance",
     args: address ? [address, contract.address] : undefined,
-    query: { enabled: Boolean(address && USDC_ADDRESS && contract.address) },
+    query: { enabled: Boolean(address && DNZD_ADDRESS && contract.address) },
   });
 
   const { writeContractAsync } = useWriteContract();
@@ -41,7 +41,7 @@ export function useBuyShares() {
         if (currentAllowance < amountIn) {
           setStep("approving");
           const approveHash = await writeContractAsync({
-            address: USDC_ADDRESS as `0x${string}`,
+            address: DNZD_ADDRESS as `0x${string}`,
             abi: MOCK_USDC_ABI,
             functionName: "approve",
             args: [contract.address, amountIn],
@@ -66,7 +66,7 @@ export function useBuyShares() {
         throw e;
       }
     },
-    [allowance, publicClient, refetchAllowance, writeContractAsync, contract, USDC_ADDRESS]
+    [allowance, publicClient, refetchAllowance, writeContractAsync, contract, DNZD_ADDRESS]
   );
 
   return {

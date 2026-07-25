@@ -19,18 +19,18 @@ export interface BuyPolicyInput {
 export function useBuyPolicy() {
   const { address } = useAccount();
   const chainId = useChainId();
-  const { QUAKESHIELD_ADDRESS, USDC_ADDRESS } = getContracts(chainId);
+  const { QUAKESHIELD_ADDRESS, DNZD_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
   const [step, setStep] = useState<BuyPolicyStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const [buyTxHash, setBuyTxHash] = useState<`0x${string}` | undefined>();
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: USDC_ADDRESS as `0x${string}`,
+    address: DNZD_ADDRESS as `0x${string}`,
     abi: MOCK_USDC_ABI,
     functionName: "allowance",
     args: address ? [address, QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
-    query: { enabled: Boolean(address && USDC_ADDRESS) },
+    query: { enabled: Boolean(address && DNZD_ADDRESS) },
   });
 
   const { writeContractAsync } = useWriteContract();
@@ -49,7 +49,7 @@ export function useBuyPolicy() {
         if (currentAllowance < premium) {
           setStep("approving");
           const approveHash = await writeContractAsync({
-            address: USDC_ADDRESS as `0x${string}`,
+            address: DNZD_ADDRESS as `0x${string}`,
             abi: MOCK_USDC_ABI,
             functionName: "approve",
             args: [QUAKESHIELD_ADDRESS as `0x${string}`, premium],
@@ -81,7 +81,7 @@ export function useBuyPolicy() {
         throw e;
       }
     },
-    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, USDC_ADDRESS]
+    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, DNZD_ADDRESS]
   );
 
   return {
