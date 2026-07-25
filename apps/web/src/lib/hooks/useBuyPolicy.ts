@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
+import {
+  useAccount,
+  useChainId,
+  usePublicClient,
+  useReadContract,
+  useWriteContract,
+} from "wagmi";
 import { DNZD_ABI, QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
 import { getFriendlyTxErrorMessage } from "@/lib/errors";
 import { estimateGasWithBuffer } from "@/lib/gas";
@@ -14,6 +20,7 @@ export interface BuyPolicyInput {
   centerLat: bigint; // x1e6
   centerLng: bigint; // x1e6
   radiusKm: bigint;
+  recurring: boolean; // fortnightly premium plan vs one-off
 }
 
 /** Buying a policy is two on-chain transactions: approve the premium spend, then buyPolicy. */
@@ -56,9 +63,17 @@ export function useBuyPolicy() {
             functionName: "approve" as const,
             args: [QUAKESHIELD_ADDRESS as `0x${string}`, premium] as const,
           };
-          const approveGas = await estimateGasWithBuffer(publicClient, { ...approveParams, account: address });
-          const approveHash = await writeContractAsync({ ...approveParams, gas: approveGas });
-          const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash });
+          const approveGas = await estimateGasWithBuffer(publicClient, {
+            ...approveParams,
+            account: address,
+          });
+          const approveHash = await writeContractAsync({
+            ...approveParams,
+            gas: approveGas,
+          });
+          const approveReceipt = await publicClient.waitForTransactionReceipt({
+            hash: approveHash,
+          });
           if (approveReceipt.status !== "success") {
             throw new Error("The approval transaction reverted on-chain.");
           }
@@ -70,9 +85,19 @@ export function useBuyPolicy() {
           address: QUAKESHIELD_ADDRESS as `0x${string}`,
           abi: QUAKESHIELD_ABI,
           functionName: "buyPolicy" as const,
-          args: [input.coverageAmount, input.triggerMagnitude, input.centerLat, input.centerLng, input.radiusKm] as const,
+          args: [
+            input.coverageAmount,
+            input.triggerMagnitude,
+            input.centerLat,
+            input.centerLng,
+            input.radiusKm,
+            input.recurring,
+          ] as const,
         };
-        const buyGas = await estimateGasWithBuffer(publicClient, { ...buyParams, account: address });
+        const buyGas = await estimateGasWithBuffer(publicClient, {
+          ...buyParams,
+          account: address,
+        });
         const hash = await writeContractAsync({ ...buyParams, gas: buyGas });
         setBuyTxHash(hash);
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
@@ -87,7 +112,15 @@ export function useBuyPolicy() {
         throw e;
       }
     },
-    [address, allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, DNZD_ADDRESS]
+    [
+      address,
+      allowance,
+      publicClient,
+      refetchAllowance,
+      writeContractAsync,
+      QUAKESHIELD_ADDRESS,
+      DNZD_ADDRESS,
+    ],
   );
 
   return {

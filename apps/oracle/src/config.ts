@@ -11,13 +11,15 @@ const NETWORKS = {
     name: "Ethereum Sepolia",
     rpcUrl: process.env.SEPOLIA_RPC_URL || "",
     quakeShieldAddress: process.env.QUAKE_SHIELD_ADDRESS_SEPOLIA || "",
-    DNZDAddress: process.env.DNZD_ADDRESS_SEPOLIA || "",
+    usdcAddress: process.env.USDC_ADDRESS_SEPOLIA || "",
+    earthquakeMarketAddress: process.env.EARTHQUAKE_MARKET_ADDRESS_SEPOLIA || "",
   },
   fuji: {
     name: "Avalanche Fuji",
     rpcUrl: process.env.FUJI_RPC_URL || "",
     quakeShieldAddress: process.env.QUAKE_SHIELD_ADDRESS_FUJI || "",
-    DNZDAddress: process.env.DNZD_ADDRESS_FUJI || "",
+    usdcAddress: process.env.USDC_ADDRESS_FUJI || "",
+    earthquakeMarketAddress: process.env.EARTHQUAKE_MARKET_ADDRESS_FUJI || "",
   },
 } as const;
 
@@ -35,7 +37,7 @@ export const env = {
   NETWORK_NAME: network.name,
   QUAKE_SHIELD_ADDRESS: network.quakeShieldAddress,
   // Informational only — the oracle never moves tokens itself.
-  DNZD_ADDRESS: network.DNZDAddress,
+  USDC_ADDRESS: network.usdcAddress,
   POLL_INTERVAL_MS: parseInt(process.env.POLL_INTERVAL_MS || "60000", 10),
   MIN_MAGITUDE_TO_REPORT: parseInt(process.env.MIN_MAGITUDE_TO_REPORT || "500", 10),
   GEONET_API_URL: process.env.GEONET_API_URL || "https://api.geonet.org.nz",
@@ -49,7 +51,7 @@ export const env = {
   ACCRUAL_CHECK_MS: parseInt(process.env.ACCRUAL_CHECK_MS || String(60 * 60 * 1000), 10),
 } as const;
 
-const required = ["PRIVATE_KEY", "QUAKE_SHIELD_ADDRESS"] as const;
+const required = ["PRIVATE_KEY", "QUAKE_SHIELD_ADDRESS", "USDC_ADDRESS"] as const;
 for (const key of required) {
   if (!env[key]) {
     throw new Error(`Missing required environment variable: ${key}`);
