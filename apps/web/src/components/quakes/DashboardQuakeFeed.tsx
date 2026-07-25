@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GEONET } from "@/lib/polygon";
+import { GEONET } from "@/lib/chains";
 import type { GeoNetQuake } from "@/types";
 
 function relativeTime(iso: string): string {
@@ -22,9 +22,8 @@ function magnitudeBadge(m: number): string {
   return "bg-ink-100 text-ink-500";
 }
 
-export default function DashboardQuakeFeed() {
+export default function DashboardQuakeFeed({ threshold }: { threshold: number }) {
   const [quakes, setQuakes] = useState<GeoNetQuake[]>([]);
-  const [threshold, setThreshold] = useState(5);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
   useEffect(() => {
@@ -48,51 +47,12 @@ export default function DashboardQuakeFeed() {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-ink-100">
       <div className="p-6 border-b border-ink-100">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-ink-900">Live Earthquake Feed</h2>
-            <p className="text-sm text-ink-500 mt-1">
-              {filtered.length} quakes shown · updated {relativeTime(lastUpdated.toISOString())}
-            </p>
-          </div>
-        </div>
-
-        {/* Magnitude Threshold Slider */}
-        <div className="flex items-center gap-4">
-          <label className="text-sm font-medium text-ink-700 whitespace-nowrap">
-            Min magnitude
-          </label>
-          <div className="flex-1 flex items-center gap-3">
-            <input
-              type="range"
-              min={0}
-              max={8}
-              step={0.5}
-              value={threshold}
-              onChange={(e) => setThreshold(Number(e.target.value))}
-              className="flex-1 h-2 bg-ink-100 rounded-full appearance-none cursor-pointer
-                [&::-webkit-slider-thumb]:appearance-none
-                [&::-webkit-slider-thumb]:w-5
-                [&::-webkit-slider-thumb]:h-5
-                [&::-webkit-slider-thumb]:rounded-full
-                [&::-webkit-slider-thumb]:bg-shield-600
-                [&::-webkit-slider-thumb]:cursor-pointer
-                [&::-webkit-slider-thumb]:shadow-sm
-                [&::-moz-range-thumb]:w-5
-                [&::-moz-range-thumb]:h-5
-                [&::-moz-range-thumb]:rounded-full
-                [&::-moz-range-thumb]:bg-shield-600
-                [&::-moz-range-thumb]:border-0
-                [&::-moz-range-thumb]:cursor-pointer"
-            />
-            <span className="w-12 text-center text-lg font-bold text-shield-600 tabular-nums">
-              M{threshold.toFixed(1)}
-            </span>
-          </div>
-        </div>
+        <h2 className="text-xl font-semibold text-ink-900">Live Earthquake Feed</h2>
+        <p className="text-sm text-ink-500 mt-1">
+          {filtered.length} quakes shown · updated {relativeTime(lastUpdated.toISOString())}
+        </p>
       </div>
 
-      {/* Quake List */}
       <div className="divide-y divide-ink-100 max-h-[400px] overflow-y-auto">
         {filtered.length === 0 ? (
           <p className="p-8 text-center text-ink-500">

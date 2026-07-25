@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useAccount, useChainId } from "wagmi";
 function getMagnitudeLabel(magnitude: number): string {
@@ -23,6 +24,7 @@ import { usePoolStats, useUserPolicies } from "@/lib/hooks/useQuakeShield";
 import { SCALE } from "@/types";
 import HomeClient from "@/components/landing/HomeClient";
 import DashboardQuakeFeed from "@/components/quakes/DashboardQuakeFeed";
+import MagnitudeSlider from "@/components/landing/MagnitudeSlider";
 
 export default function DashboardPage() {
   const { isConnected } = useAccount();
@@ -30,18 +32,34 @@ export default function DashboardPage() {
   const chainConfigured = isChainConfigured(chainId);
   const { stats, isLoading: statsLoading } = usePoolStats();
   const { policies, isLoading: policiesLoading } = useUserPolicies();
+  const [magnitudeThreshold, setMagnitudeThreshold] = useState(5);
 
   return (
     <div className="min-h-screen bg-white">
       <Header />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Seismic Graph + City Widgets */}
-        <HomeClient />
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_260px] gap-6 items-start">
+          <div className="min-w-0">
+            {/* Seismic Graph + City Widgets */}
+            <HomeClient minMagnitude={magnitudeThreshold} />
 
-        {/* Live Quake Feed with Magnitude Slider */}
-        <div className="mt-10 max-w-5xl mx-auto">
-          <DashboardQuakeFeed />
+            {/* Live Quake Feed */}
+            <div className="mt-6">
+              <DashboardQuakeFeed threshold={magnitudeThreshold} />
+            </div>
+          </div>
+
+          {/* Settings Panel */}
+          <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 lg:sticky lg:top-6">
+            <h2 className="text-sm font-semibold text-ink-900 mb-4">
+              Dashboard Settings
+            </h2>
+            <MagnitudeSlider
+              value={magnitudeThreshold}
+              onChange={setMagnitudeThreshold}
+            />
+          </div>
         </div>
 
         {/* Wallet Section */}
