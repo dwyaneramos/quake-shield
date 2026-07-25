@@ -1,4 +1,3 @@
-import { Header } from "@/components/layout/Header";
 import { QuakesClient } from "@/components/quakes/QuakesClient";
 import { fetchRecentQuakes } from "@/lib/geonet";
 
@@ -7,8 +6,6 @@ export default async function QuakesPage() {
 
   return (
     <div className="min-h-screen bg-ink-50">
-      <Header />
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <QuakesClient initialQuakes={initialQuakes} />
       </main>

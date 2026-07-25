@@ -59,6 +59,50 @@ export const QUAKESHIELD_ABI = [
       {
         "indexed": true,
         "internalType": "address",
+        "name": "provider",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "sharesMinted",
+        "type": "uint256"
+      }
+    ],
+    "name": "CapitalDeposited",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "provider",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "CapitalWithdrawn",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "oldOracle",
         "type": "address"
       },
@@ -185,6 +229,32 @@ export const QUAKESHIELD_ABI = [
     "type": "event"
   },
   {
+    "inputs": [],
+    "name": "MAX_COVERAGE_PER_POLICY",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MIN_RESERVE_RATIO_BPS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -220,6 +290,19 @@ export const QUAKESHIELD_ABI = [
         "type": "uint256"
       }
     ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "deposit",
+    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -322,6 +405,40 @@ export const QUAKESHIELD_ABI = [
         "internalType": "uint256",
         "name": "_activePolicies",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_totalActiveCoverage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_totalShares",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "provider",
+        "type": "address"
+      }
+    ],
+    "name": "getProviderInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currentValue",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -385,6 +502,19 @@ export const QUAKESHIELD_ABI = [
       {
         "internalType": "uint256",
         "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getReserveRatio",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "reserveRatioBps",
         "type": "uint256"
       }
     ],
@@ -521,6 +651,25 @@ export const QUAKESHIELD_ABI = [
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "providerShares",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "magnitude",
         "type": "uint256"
@@ -623,6 +772,19 @@ export const QUAKESHIELD_ABI = [
   },
   {
     "inputs": [],
+    "name": "totalActiveCoverage",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "totalPayouts",
     "outputs": [
       {
@@ -637,6 +799,19 @@ export const QUAKESHIELD_ABI = [
   {
     "inputs": [],
     "name": "totalPremiums",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalShares",
     "outputs": [
       {
         "internalType": "uint256",
@@ -695,6 +870,13 @@ export const QUAKESHIELD_ABI = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "withdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

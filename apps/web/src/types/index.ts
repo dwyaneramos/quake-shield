@@ -48,6 +48,14 @@ export interface PoolStats {
   totalPayouts: bigint;
   balance: bigint;
   activePolicies: bigint;
+  totalActiveCoverage: bigint;
+  totalShares: bigint;
+}
+
+// Capital provider position
+export interface ProviderPosition {
+  shares: bigint;
+  currentValue: bigint;
 }
 
 // Earthquake event from contract

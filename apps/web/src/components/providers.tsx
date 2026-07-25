@@ -15,7 +15,17 @@ const rainbowKitTheme = lightTheme({
 });
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 30_000,
+            gcTime: 5 * 60_000,
+          },
+        },
+      }),
+  );
 
   return (
     <WagmiProvider config={wagmiConfig}>
