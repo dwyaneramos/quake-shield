@@ -60,6 +60,26 @@ export interface QuakeEvent {
   publicId: string;
 }
 
+// Market resolution result
+export interface MarketResolution {
+  resolved: boolean;
+  outcome: boolean;
+  qualifyingQuake?: GeoNetQuake;
+  checkedAt: string;
+}
+
+// Earthquake statistics from GeoNet
+export interface QuakeStats {
+  magnitudeCount: {
+    last7Days: { magnitude: number; count: number }[];
+    last28Days: { magnitude: number; count: number }[];
+    last365Days: { magnitude: number; count: number }[];
+  };
+  rate: {
+    perDay: { magnitude: number; count: number }[];
+  };
+}
+
 // Scaled value helpers
 export const SCALE = {
   /**

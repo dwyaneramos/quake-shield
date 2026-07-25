@@ -17,6 +17,9 @@ importers:
 
   apps/oracle:
     dependencies:
+      '@quakeshield/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
