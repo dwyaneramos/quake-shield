@@ -11,13 +11,13 @@ const NETWORKS = {
     name: "Ethereum Sepolia",
     rpcUrl: process.env.SEPOLIA_RPC_URL || "",
     quakeShieldAddress: process.env.QUAKE_SHIELD_ADDRESS_SEPOLIA || "",
-    dnzdAddress: process.env.dnzd_ADDRESS_SEPOLIA || "",
+    DNZDAddress: process.env.DNZD_ADDRESS_SEPOLIA || "",
   },
   fuji: {
     name: "Avalanche Fuji",
     rpcUrl: process.env.FUJI_RPC_URL || "",
     quakeShieldAddress: process.env.QUAKE_SHIELD_ADDRESS_FUJI || "",
-    dnzdAddress: process.env.dnzd_ADDRESS_FUJI || "",
+    DNZDAddress: process.env.DNZD_ADDRESS_FUJI || "",
   },
 } as const;
 
@@ -40,7 +40,7 @@ export const env = {
   RPC_URL: network.rpcUrl,
   NETWORK_NAME: network.name,
   QUAKE_SHIELD_ADDRESS: network.quakeShieldAddress,
-  dnzd_ADDRESS: network.dnzdAddress,
+  DNZD_ADDRESS: network.DNZDAddress,
   POLL_INTERVAL_MS: parseInt(process.env.POLL_INTERVAL_MS || "60000", 10),
   MIN_MAGITUDE_TO_REPORT: parseInt(
     process.env.MIN_MAGITUDE_TO_REPORT || "500",
@@ -54,7 +54,7 @@ const required = [
   "PRIVATE_KEY",
   "RPC_URL",
   "QUAKE_SHIELD_ADDRESS",
-  "dnzd_ADDRESS",
+  "DNZD_ADDRESS",
 ] as const;
 for (const key of required) {
   if (!env[key]) {

@@ -69,7 +69,7 @@ export default function ProvidersPage() {
               Capital Providers
             </h1>
             <p className="text-ink-600 mt-1">
-              Deposit dnzd to back the insurance pool and earn yield from
+              Deposit DNZD to back the insurance pool and earn yield from
               premiums.
             </p>
           </div>
@@ -98,7 +98,7 @@ export default function ProvidersPage() {
               label="Pool Balance"
               value={
                 stats
-                  ? `${SCALE.fromDNZD(stats.balance).toLocaleString()} dnzd`
+                  ? `${SCALE.fromDNZD(stats.balance).toLocaleString()} DNZD`
                   : "--"
               }
             />
@@ -108,7 +108,7 @@ export default function ProvidersPage() {
                 stats
                   ? `${SCALE.fromDNZD(
                       stats.totalActiveCoverage,
-                    ).toLocaleString()} dnzd`
+                    ).toLocaleString()} DNZD`
                   : "--"
               }
             />
@@ -172,8 +172,8 @@ export default function ProvidersPage() {
                     {position
                       ? `${SCALE.fromDNZD(
                           position.currentValue,
-                        ).toLocaleString()} dnzd`
-                      : "0 dnzd"}
+                        ).toLocaleString()} DNZD`
+                      : "0 DNZD"}
                   </span>
                 </div>
                 {position && position.shares > 0n && (
@@ -243,7 +243,7 @@ export default function ProvidersPage() {
           {/* Deposit Form */}
           <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6">
             <h2 className="text-xl font-semibold text-ink-900 mb-4">
-              Deposit dnzd
+              Deposit DNZD
             </h2>
             {!isConnected ? (
               <div className="text-center py-8">
@@ -253,7 +253,7 @@ export default function ProvidersPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-ink-700 mb-2">
-                    Amount (dnzd)
+                    Amount (DNZD)
                   </label>
                   <input
                     type="number"
@@ -326,7 +326,7 @@ export default function ProvidersPage() {
                     className="w-full bg-shield-600 text-white py-3 rounded-lg font-semibold hover:bg-shield-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {depositStep === "approving"
-                      ? "Approving dnzd…"
+                      ? "Approving DNZD…"
                       : depositStep === "depositing"
                       ? "Depositing…"
                       : "Deposit"}

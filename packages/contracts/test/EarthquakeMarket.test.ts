@@ -29,7 +29,7 @@ function computeBuy(yesReserve: bigint, noReserve: bigint, amountIn: bigint, isY
 describe("EarthquakeMarket", function () {
   let market: EarthquakeMarket;
   let quakeshield: QuakeShield;
-  let dnzd: MockDNZD;
+  let DNZD: MockDNZD;
   let owner: HardhatEthersSigner;
   let oracle: HardhatEthersSigner;
   let user1: HardhatEthersSigner;
@@ -51,25 +51,25 @@ describe("EarthquakeMarket", function () {
     [owner, oracle, user1, user2] = await ethers.getSigners();
 
     const MockDNZD = await ethers.getContractFactory("MockDNZD");
-    dnzd = await MockDNZD.deploy();
+    DNZD = await MockDNZD.deploy();
 
     const QuakeShield = await ethers.getContractFactory("QuakeShield");
-    quakeshield = await QuakeShield.deploy(await dnzd.getAddress());
+    quakeshield = await QuakeShield.deploy(await DNZD.getAddress());
     await quakeshield.setOracle(oracle.address);
 
     const EarthquakeMarket = await ethers.getContractFactory("EarthquakeMarket");
-    market = await EarthquakeMarket.deploy(await dnzd.getAddress(), await quakeshield.getAddress());
+    market = await EarthquakeMarket.deploy(await DNZD.getAddress(), await quakeshield.getAddress());
     await market.setOracle(oracle.address);
 
-    await dnzd.mint(user1.address, ethers.parseUnits("100000", 6));
-    await dnzd.mint(user2.address, ethers.parseUnits("100000", 6));
-    await dnzd.connect(user1).approve(await market.getAddress(), ethers.MaxUint256);
-    await dnzd.connect(user2).approve(await market.getAddress(), ethers.MaxUint256);
+    await DNZD.mint(user1.address, ethers.parseUnits("100000", 6));
+    await DNZD.mint(user2.address, ethers.parseUnits("100000", 6));
+    await DNZD.connect(user1).approve(await market.getAddress(), ethers.MaxUint256);
+    await DNZD.connect(user2).approve(await market.getAddress(), ethers.MaxUint256);
   });
 
   describe("Deployment", function () {
     it("Should set token, QuakeShield, owner and oracle", async function () {
-      expect(await market.token()).to.equal(await dnzd.getAddress());
+      expect(await market.token()).to.equal(await DNZD.getAddress());
       expect(await market.quakeShield()).to.equal(await quakeshield.getAddress());
       expect(await market.owner()).to.equal(owner.address);
       expect(await market.oracle()).to.equal(oracle.address);
@@ -202,13 +202,13 @@ describe("EarthquakeMarket", function () {
         .withArgs(0, true);
 
       const winnerShares = await market.yesSharesOf(0, user1.address);
-      const balanceBefore = await dnzd.balanceOf(user1.address);
+      const balanceBefore = await DNZD.balanceOf(user1.address);
 
       await expect(market.connect(user1).redeem(0))
         .to.emit(market, "Redeemed")
         .withArgs(0, user1.address, winnerShares);
 
-      const balanceAfter = await dnzd.balanceOf(user1.address);
+      const balanceAfter = await DNZD.balanceOf(user1.address);
       expect(balanceAfter - balanceBefore).to.equal(winnerShares);
       expect(await market.yesSharesOf(0, user1.address)).to.equal(0);
     });
@@ -240,11 +240,11 @@ describe("EarthquakeMarket", function () {
       await market.connect(oracle).resolveMarket(0, false);
 
       const winnerShares = await market.noSharesOf(0, user2.address);
-      const balanceBefore = await dnzd.balanceOf(user2.address);
+      const balanceBefore = await DNZD.balanceOf(user2.address);
 
       await market.connect(user2).redeem(0);
 
-      const balanceAfter = await dnzd.balanceOf(user2.address);
+      const balanceAfter = await DNZD.balanceOf(user2.address);
       expect(balanceAfter - balanceBefore).to.equal(winnerShares);
     });
 

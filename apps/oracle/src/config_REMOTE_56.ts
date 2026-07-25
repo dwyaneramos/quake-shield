@@ -11,7 +11,7 @@ const NETWORKS = {
     name: "Ethereum Sepolia",
     rpcUrl: process.env.SEPOLIA_RPC_URL || "",
     quakeShieldAddress: process.env.QUAKE_SHIELD_ADDRESS_SEPOLIA || "",
-    dnzdAddress: process.env.dnzd_ADDRESS_SEPOLIA || "",
+    DNZDAddress: process.env.DNZD_ADDRESS_SEPOLIA || "",
     earthquakeMarketAddress:
       process.env.EARTHQUAKE_MARKET_ADDRESS_SEPOLIA || "",
   },
@@ -19,7 +19,7 @@ const NETWORKS = {
     name: "Avalanche Fuji",
     rpcUrl: process.env.FUJI_RPC_URL || "",
     quakeShieldAddress: process.env.QUAKE_SHIELD_ADDRESS_FUJI || "",
-    dnzdAddress: process.env.dnzd_ADDRESS_FUJI || "",
+    DNZDAddress: process.env.DNZD_ADDRESS_FUJI || "",
     earthquakeMarketAddress: process.env.EARTHQUAKE_MARKET_ADDRESS_FUJI || "",
   },
 } as const;
@@ -43,7 +43,7 @@ export const env = {
   RPC_URL: network.rpcUrl,
   NETWORK_NAME: network.name,
   QUAKE_SHIELD_ADDRESS: network.quakeShieldAddress,
-  dnzd_ADDRESS: network.dnzdAddress,
+  DNZD_ADDRESS: network.DNZDAddress,
   // Optional — EarthquakeMarket may not be deployed to every chain yet.
   EARTHQUAKE_MARKET_ADDRESS: network.earthquakeMarketAddress,
   POLL_INTERVAL_MS: parseInt(process.env.POLL_INTERVAL_MS || "30000", 10),
@@ -59,7 +59,7 @@ const required = [
   "PRIVATE_KEY",
   "RPC_URL",
   "QUAKE_SHIELD_ADDRESS",
-  "dnzd_ADDRESS",
+  "DNZD_ADDRESS",
 ] as const;
 for (const key of required) {
   if (!env[key]) {
