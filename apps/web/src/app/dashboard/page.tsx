@@ -12,6 +12,7 @@ import { CONTRACTS_CONFIGURED } from "@/lib/contracts";
 import { usePoolStats, useUserPolicies } from "@/lib/hooks/useQuakeShield";
 import { SCALE } from "@/types";
 import HomeClient from "@/components/landing/HomeClient";
+import DashboardQuakeFeed from "@/components/quakes/DashboardQuakeFeed";
 
 export default function DashboardPage() {
   const { isConnected } = useAccount();
@@ -25,6 +26,11 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Seismic Graph + City Widgets */}
         <HomeClient />
+
+        {/* Live Quake Feed with Magnitude Slider */}
+        <div className="mt-10 max-w-5xl mx-auto">
+          <DashboardQuakeFeed />
+        </div>
 
         {/* Wallet Section */}
         <div className="mt-12 max-w-5xl mx-auto">
