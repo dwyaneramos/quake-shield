@@ -1035,10 +1035,157 @@ export const MOCK_USDC_ABI = [
   }
 ] as const;
 
+export const EARTHQUAKE_MARKET_ABI = [
+  {
+    "inputs": [
+      { "internalType": "string", "name": "description", "type": "string" },
+      { "internalType": "int256", "name": "centerLat", "type": "int256" },
+      { "internalType": "int256", "name": "centerLng", "type": "int256" },
+      { "internalType": "uint256", "name": "radiusKm", "type": "uint256" },
+      { "internalType": "uint256", "name": "triggerMagnitude", "type": "uint256" },
+      { "internalType": "uint256", "name": "resolutionTime", "type": "uint256" }
+    ],
+    "name": "createMarket",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "marketId", "type": "uint256" },
+      { "internalType": "uint256", "name": "amountIn", "type": "uint256" }
+    ],
+    "name": "buyYes",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "marketId", "type": "uint256" },
+      { "internalType": "uint256", "name": "amountIn", "type": "uint256" }
+    ],
+    "name": "buyNo",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "marketId", "type": "uint256" }],
+    "name": "redeem",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "marketId", "type": "uint256" }],
+    "name": "getMarket",
+    "outputs": [
+      { "internalType": "string", "name": "description", "type": "string" },
+      { "internalType": "int256", "name": "centerLat", "type": "int256" },
+      { "internalType": "int256", "name": "centerLng", "type": "int256" },
+      { "internalType": "uint256", "name": "radiusKm", "type": "uint256" },
+      { "internalType": "uint256", "name": "triggerMagnitude", "type": "uint256" },
+      { "internalType": "uint256", "name": "resolutionTime", "type": "uint256" },
+      { "internalType": "uint256", "name": "yesReserve", "type": "uint256" },
+      { "internalType": "uint256", "name": "noReserve", "type": "uint256" },
+      { "internalType": "uint256", "name": "usdcCollateral", "type": "uint256" },
+      { "internalType": "bool", "name": "resolved", "type": "bool" },
+      { "internalType": "bool", "name": "outcomeYes", "type": "bool" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "uint256", "name": "marketId", "type": "uint256" }],
+    "name": "getMarketPrice",
+    "outputs": [
+      { "internalType": "uint256", "name": "yesPrice", "type": "uint256" },
+      { "internalType": "uint256", "name": "noPrice", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getMarketCount",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "", "type": "uint256" },
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
+    "name": "yesSharesOf",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "", "type": "uint256" },
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
+    "name": "noSharesOf",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "marketId", "type": "uint256" },
+      { "indexed": false, "internalType": "string", "name": "description", "type": "string" },
+      { "indexed": false, "internalType": "int256", "name": "centerLat", "type": "int256" },
+      { "indexed": false, "internalType": "int256", "name": "centerLng", "type": "int256" },
+      { "indexed": false, "internalType": "uint256", "name": "radiusKm", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "triggerMagnitude", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "resolutionTime", "type": "uint256" }
+    ],
+    "name": "MarketCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "marketId", "type": "uint256" },
+      { "indexed": true, "internalType": "address", "name": "buyer", "type": "address" },
+      { "indexed": false, "internalType": "bool", "name": "isYes", "type": "bool" },
+      { "indexed": false, "internalType": "uint256", "name": "amountIn", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "sharesOut", "type": "uint256" }
+    ],
+    "name": "SharesPurchased",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "marketId", "type": "uint256" },
+      { "indexed": false, "internalType": "bool", "name": "outcomeYes", "type": "bool" }
+    ],
+    "name": "MarketResolved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "marketId", "type": "uint256" },
+      { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "Redeemed",
+    "type": "event"
+  }
+] as const;
+
 // Contract addresses (set after deployment in apps/web/.env.local)
 export const CONTRACTS = {
   QUAKESHIELD_ADDRESS: (process.env.NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS || "") as `0x${string}` | "",
   USDC_ADDRESS: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS || "") as `0x${string}` | "",
+  EARTHQUAKE_MARKET_ADDRESS: (process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_ADDRESS || "") as `0x${string}` | "",
 } as const;
 
 export const CONTRACTS_CONFIGURED = Boolean(CONTRACTS.QUAKESHIELD_ADDRESS && CONTRACTS.USDC_ADDRESS);
+export const MARKET_CONTRACTS_CONFIGURED = Boolean(CONTRACTS.EARTHQUAKE_MARKET_ADDRESS && CONTRACTS.USDC_ADDRESS);

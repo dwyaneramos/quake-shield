@@ -98,3 +98,34 @@ export const SCALE = {
    */
   fromUSDC: (scaled: bigint): number => Number(scaled) / 1_000_000,
 };
+
+// Earthquake prediction market
+export interface EarthquakeMarket {
+  id: bigint;
+  description: string;
+  centerLat: bigint;
+  centerLng: bigint;
+  radiusKm: bigint;
+  triggerMagnitude: bigint;
+  resolutionTime: bigint;
+  yesReserve: bigint;
+  noReserve: bigint;
+  usdcCollateral: bigint;
+  resolved: boolean;
+  outcomeYes: boolean;
+}
+
+// Parsed from getMarket return tuple
+export interface MarketData {
+  description: string;
+  centerLat: bigint;
+  centerLng: bigint;
+  radiusKm: bigint;
+  triggerMagnitude: bigint;
+  resolutionTime: bigint;
+  yesReserve: bigint;
+  noReserve: bigint;
+  usdcCollateral: bigint;
+  resolved: boolean;
+  outcomeYes: boolean;
+}

@@ -21,6 +21,14 @@ async function main() {
   const quakeshieldAddress = await quakeshield.getAddress();
   console.log("QuakeShield deployed to:", quakeshieldAddress);
 
+  // Deploy EarthquakeMarket
+  console.log("\n--- Deploying EarthquakeMarket ---");
+  const EarthquakeMarket = await ethers.getContractFactory("EarthquakeMarket");
+  const market = await EarthquakeMarket.deploy(usdcAddress, quakeshieldAddress);
+  await market.waitForDeployment();
+  const marketAddress = await market.getAddress();
+  console.log("EarthquakeMarket deployed to:", marketAddress);
+
   // Mint test USDC to deployer (1,000,000 USDC)
   console.log("\n--- Minting test USDC ---");
   const mintAmount = ethers.parseUnits("1000000", 6);
@@ -34,12 +42,14 @@ async function main() {
   console.log("Network: Polygon Amoy (80002)");
   console.log("MockUSDC:", usdcAddress);
   console.log("QuakeShield:", quakeshieldAddress);
+  console.log("EarthquakeMarket:", marketAddress);
   console.log("====================================");
   console.log("\nNext steps:");
   console.log("1. Update apps/web/.env.local with these addresses");
   console.log("2. Update apps/oracle/.env with these addresses");
   console.log("3. Mint USDC to oracle wallet for gas");
   console.log("4. Set oracle address in QuakeShield contract");
+  console.log("5. Set oracle address in EarthquakeMarket contract");
 }
 
 main().catch((error) => {
