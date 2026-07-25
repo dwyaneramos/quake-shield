@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useEffect, Suspense, useCallback } from "react";
 import { useAccount, useChainId } from "wagmi";
@@ -15,16 +16,22 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Header } from "@/components/layout/Header";
-import { getContracts, isChainConfigured } from "@/lib/contracts";
+import { isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
-import { useMarkets } from "@/lib/hooks/useMarkets";
-import { useBuyShares } from "@/lib/hooks/useBuyShares";
-import { previewBuy } from "@/lib/marketMath";
 import { getExplorerUrl } from "@/lib/chains";
 import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
+import { getRegionForCity, getNearestRegion } from "@/lib/nzRegions";
 import { SCALE } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
+
+const RegionMap = dynamic(
+  () => import("@/components/policies/RegionMap").then((mod) => mod.RegionMap),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
 
 const MAX_COVERAGE_DNZD = 10_000;
 
@@ -167,202 +174,6 @@ function CityMiniGraph({ cityId }: { cityId: string }) {
 
 let magnitudeDisplay = "6.0";
 
-/** Lets the buyer take a YES/NO position in the earthquake prediction market
- * alongside their policy — a separate on-chain trade against the
- * EarthquakeMarket AMM, priced live. */
-function MarketPositionCard() {
-  const chainId = useChainId();
-  const { EARTHQUAKE_MARKET_ADDRESS } = getContracts(chainId);
-  const marketsConfigured = Boolean(EARTHQUAKE_MARKET_ADDRESS);
-  const { markets, isLoading, refetch } = useMarkets();
-  const { buyShares, step, error, isPending, buyTxHash, reset } =
-    useBuyShares();
-
-  const openMarkets = useMemo(
-    () => markets.filter((m) => !m.resolved),
-    [markets],
-  );
-
-  const [marketId, setMarketId] = useState<string>("");
-  const [side, setSide] = useState<"yes" | "no">("yes");
-  const [amount, setAmount] = useState("10");
-
-  useEffect(() => {
-    if (!marketId && openMarkets.length > 0)
-      setMarketId(openMarkets[0].id.toString());
-  }, [openMarkets, marketId]);
-
-  const market = openMarkets.find((m) => m.id.toString() === marketId);
-
-  if (!marketsConfigured) return null;
-
-  const amountIn = SCALE.toDNZD(Number(amount) || 0);
-  const previewShares = market
-    ? previewBuy(market.yesReserve, market.noReserve, amountIn, side === "yes")
-    : 0n;
-  const yesPct = market ? SCALE.fromOdds(market.yesPrice) * 100 : 0;
-  const noPct = 100 - yesPct;
-
-  const handleBuy = async () => {
-    if (!market || amountIn <= 0n) return;
-    await buyShares(market.id, side === "yes", amountIn)
-      .then(() => refetch())
-      .catch(() => {});
-  };
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 mt-6">
-      <h2 className="text-lg font-bold text-ink-900 mb-1">Market Position</h2>
-      <p className="text-ink-500 text-sm mb-4">
-        Separately from your policy, bet YES or NO on whether the earthquake
-        happens — a one-off trade, priced by the live market.
-      </p>
-
-      {isLoading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-9 w-full rounded-lg" />
-          <Skeleton className="h-2 w-full rounded-full" />
-          <div className="flex gap-2">
-            <Skeleton className="h-9 flex-1 rounded-lg" />
-            <Skeleton className="h-9 flex-1 rounded-lg" />
-          </div>
-        </div>
-      ) : openMarkets.length === 0 ? (
-        <p className="text-sm text-ink-500">
-          No open markets on this network yet.
-        </p>
-      ) : step === "done" ? (
-        <div>
-          <p className="text-sm text-shield-700 mb-1">
-            {side.toUpperCase()} position bought —{" "}
-            {SCALE.fromDNZD(previewShares).toLocaleString(undefined, {
-              maximumFractionDigits: 4,
-            })}{" "}
-            shares.
-          </p>
-          {buyTxHash && (
-            <a
-              href={`${getExplorerUrl(chainId)}/tx/${buyTxHash}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs font-medium text-shield-600 hover:text-shield-700"
-            >
-              View transaction →
-            </a>
-          )}
-          <button
-            onClick={reset}
-            type="button"
-            className="text-xs text-ink-400 hover:text-ink-600 block mt-2"
-          >
-            Take another position
-          </button>
-        </div>
-      ) : (
-        <>
-          {openMarkets.length > 1 && (
-            <select
-              value={marketId}
-              onChange={(e) => setMarketId(e.target.value)}
-              className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-            >
-              {openMarkets.map((m) => (
-                <option key={m.id.toString()} value={m.id.toString()}>
-                  {m.description}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {market && (
-            <>
-              <div className="mb-3">
-                <div className="flex h-2 rounded-full overflow-hidden bg-ink-100">
-                  <div
-                    className="bg-shield-500"
-                    style={{ width: `${yesPct}%` }}
-                  />
-                  <div
-                    className="bg-quake-400"
-                    style={{ width: `${noPct}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs font-medium mt-1">
-                  <span className="text-shield-700">
-                    YES {yesPct.toFixed(0)}%
-                  </span>
-                  <span className="text-quake-700">NO {noPct.toFixed(0)}%</span>
-                </div>
-              </div>
-
-              <div className="flex gap-2 mb-3">
-                <button
-                  type="button"
-                  onClick={() => setSide("yes")}
-                  className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                    side === "yes"
-                      ? "bg-shield-600 text-white"
-                      : "bg-ink-100 text-ink-600"
-                  }`}
-                >
-                  Buy YES (will happen)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSide("no")}
-                  className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                    side === "no"
-                      ? "bg-quake-500 text-white"
-                      : "bg-ink-100 text-ink-600"
-                  }`}
-                >
-                  Buy NO (won&rsquo;t happen)
-                </button>
-              </div>
-
-              <label className="block text-xs font-medium text-ink-500 mb-1">
-                Amount (DNZD)
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-              />
-
-              <div className="bg-ink-50 rounded-lg p-3 border border-ink-100 text-sm mb-3 flex justify-between">
-                <span className="text-ink-500">Current payout you may get</span>
-                <span className="font-semibold text-shield-700">
-                  {SCALE.fromDNZD(previewShares).toLocaleString(undefined, {
-                    maximumFractionDigits: 4,
-                  })}{" "}
-                  DNZD
-                </span>
-              </div>
-
-              {error && <p className="text-xs text-quake-700 mb-2">{error}</p>}
-
-              <button
-                type="button"
-                onClick={handleBuy}
-                disabled={isPending || amountIn <= 0n}
-                className="w-full bg-shield-600 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-shield-700 transition-colors disabled:opacity-50"
-              >
-                {step === "approving"
-                  ? "Approving…"
-                  : step === "buying"
-                  ? "Buying…"
-                  : `Buy ${side.toUpperCase()} (one-off)`}
-              </button>
-            </>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
 function BuyPolicyForm() {
   const searchParams = useSearchParams();
   const initialCity = searchParams.get("city");
@@ -398,6 +209,11 @@ function BuyPolicyForm() {
   const lat = isCustom ? customLat : String(region.lat);
   const lng = isCustom ? customLng : String(region.lng);
   const selectedCityId = isCustom ? "wellington" : region.id;
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+  const nzRegion = isCustom
+    ? getNearestRegion(latNum, lngNum)
+    : getRegionForCity(region.id);
 
   const coverageNum = Number(coverage) || 0;
   const magnitudeNum = Number(magnitude) || 0;
@@ -730,7 +546,25 @@ function BuyPolicyForm() {
                 </p>
               </div>
               <CityMiniGraph cityId={selectedCityId} />
-              <MarketPositionCard />
+              {nzRegion && (
+                <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 mt-6">
+                  <h2 className="text-lg font-bold text-ink-900 mb-1">
+                    {nzRegion.name}
+                  </h2>
+                  <p className="text-ink-500 text-sm mb-4">
+                    Your coverage is centered here. The highlighted area shows
+                    the wider NZ region your pinpoint falls in.
+                  </p>
+                  <div className="rounded-lg overflow-hidden border border-ink-100">
+                    <RegionMap
+                      region={nzRegion}
+                      markerLat={latNum}
+                      markerLng={lngNum}
+                      markerLabel={isCustom ? "Custom location" : region.label}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
