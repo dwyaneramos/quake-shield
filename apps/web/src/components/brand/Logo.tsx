@@ -1,36 +1,33 @@
 export function LogoMark({ className = "h-9 w-9" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <svg viewBox="0 0 130 137" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <path
-        d="M24 2 L44 10 V26 C44 40.5 35.6 50.4 24 54 C12.4 50.4 4 40.5 4 26 V10 Z"
-        fill="url(#shield-gradient)"
-        stroke="#12664a"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9 30 H16 L19.5 21 L24 39 L27.5 25 L30.5 30 H39"
-        stroke="#fd9d24"
-        strokeWidth="2.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d="M65 6 C91 20 113 20 121 20 C121 96 105 118 65 130 C25 118 9 96 9 20 C17 20 39 20 65 6 Z"
         fill="none"
+        stroke="#1F6F52"
+        strokeWidth="7"
+        strokeLinejoin="round"
+        strokeLinecap="round"
       />
-      <defs>
-        <linearGradient id="shield-gradient" x1="4" y1="2" x2="44" y2="54" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#45b98d" />
-          <stop offset="1" stopColor="#15805c" />
-        </linearGradient>
-      </defs>
+      <circle cx="65" cy="82" r="5" fill="#1F6F52" />
+      <path d="M45 82 a20 20 0 0 1 40 0" fill="none" stroke="#1F6F52" strokeWidth="5" strokeLinecap="round" />
+      <path
+        d="M33 82 a32 32 0 0 1 64 0"
+        fill="none"
+        stroke="#1F6F52"
+        strokeWidth="5"
+        strokeLinecap="round"
+        opacity="0.5"
+      />
     </svg>
   );
 }
 
 export function Logo({ className = "", markClassName = "h-9 w-9" }: { className?: string; markClassName?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
+    <span className={`inline-flex translate-y-1 items-center gap-2 ${className}`}>
       <LogoMark className={markClassName} />
-      <span className="text-xl font-bold tracking-tight text-ink-900">
+      <span className="text-xl font-bold leading-none tracking-tight text-ink-900">
         Quake<span className="text-shield-600">Shield</span>
       </span>
     </span>
