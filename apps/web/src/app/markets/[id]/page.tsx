@@ -74,7 +74,7 @@ export default function MarketDetailPage() {
     );
   }
 
-  const amountIn = SCALE.toUSDC(Number(amount) || 0);
+  const amountIn = SCALE.toDNZD(Number(amount) || 0);
   const previewShares = previewBuy(market.yesReserve, market.noReserve, amountIn, side === "yes");
   const yesPct = SCALE.fromOdds(market.yesPrice) * 100;
   const noPct = 100 - yesPct;
@@ -142,11 +142,11 @@ export default function MarketDetailPage() {
             <div className="grid grid-cols-2 gap-3 text-sm bg-ink-50 rounded-lg p-4 border border-ink-100">
               <div>
                 <p className="text-ink-500">Your YES shares</p>
-                <p className="font-semibold text-ink-900">{SCALE.fromUSDC(yesShares).toLocaleString()}</p>
+                <p className="font-semibold text-ink-900">{SCALE.fromDNZD(yesShares).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-ink-500">Your NO shares</p>
-                <p className="font-semibold text-ink-900">{SCALE.fromUSDC(noShares).toLocaleString()}</p>
+                <p className="font-semibold text-ink-900">{SCALE.fromDNZD(noShares).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function MarketDetailPage() {
                 {canRedeem ? (
                   <>
                     <p className="text-sm text-ink-600 mb-4">
-                      You hold {SCALE.fromUSDC(winningShares).toLocaleString()} winning shares, redeemable 1:1.
+                      You hold {SCALE.fromDNZD(winningShares).toLocaleString()} winning shares, redeemable 1:1.
                     </p>
                     <button
                       onClick={handleRedeem}
@@ -222,7 +222,7 @@ export default function MarketDetailPage() {
                   <div className="flex justify-between">
                     <span className="text-ink-500">Estimated shares</span>
                     <span className="font-semibold text-ink-900">
-                      {SCALE.fromUSDC(previewShares).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                      {SCALE.fromDNZD(previewShares).toLocaleString(undefined, { maximumFractionDigits: 4 })}
                     </span>
                   </div>
                 </div>

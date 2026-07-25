@@ -1,7 +1,7 @@
 import { ethers, network } from "hardhat";
 
 /**
- * Deploys EarthquakeMarket standalone, reusing the QuakeShield + USDC
+ * Deploys EarthquakeMarket standalone, reusing the QuakeShield + DNZD
  * addresses already deployed on this network (does not touch QuakeShield),
  * then seeds one sample market so the UI has something to trade.
  */
@@ -11,17 +11,17 @@ async function main() {
   console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)));
 
   const suffix = network.name.toUpperCase();
-  const usdcAddress = process.env[`USDC_ADDRESS_${suffix}`] || process.env[`NEXT_PUBLIC_MOCK_USDC_ADDRESS_${suffix}`];
+  const dnzdAddress = process.env[`DNZD_ADDRESS_${suffix}`] || process.env[`NEXT_PUBLIC_DNZD_ADDRESS_${suffix}`];
   const quakeShieldAddress = process.env[`QUAKE_SHIELD_ADDRESS_${suffix}`] || process.env[`NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_${suffix}`];
 
-  if (!usdcAddress) throw new Error(`Missing USDC_ADDRESS_${suffix} / NEXT_PUBLIC_MOCK_USDC_ADDRESS_${suffix} in .env`);
+  if (!dnzdAddress) throw new Error(`Missing DNZD_ADDRESS_${suffix} / NEXT_PUBLIC_DNZD_ADDRESS_${suffix} in .env`);
   if (!quakeShieldAddress) throw new Error(`Missing QUAKE_SHIELD_ADDRESS_${suffix} / NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_${suffix} in .env`);
 
   console.log("\n--- Deploying EarthquakeMarket ---");
-  console.log("Reusing token:", usdcAddress);
+  console.log("Reusing token:", dnzdAddress);
   console.log("Reusing QuakeShield:", quakeShieldAddress);
   const EarthquakeMarket = await ethers.getContractFactory("EarthquakeMarket");
-  const earthquakeMarket = await EarthquakeMarket.deploy(usdcAddress, quakeShieldAddress);
+  const earthquakeMarket = await EarthquakeMarket.deploy(dnzdAddress, quakeShieldAddress);
   await earthquakeMarket.waitForDeployment();
   const earthquakeMarketAddress = await earthquakeMarket.getAddress();
   console.log("EarthquakeMarket deployed to:", earthquakeMarketAddress);

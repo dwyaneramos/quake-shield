@@ -41,7 +41,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     // ============ State Variables ============
 
-    IERC20 public immutable usdc;
+    IERC20 public immutable dnzd;
 
     mapping(uint256 => Policy) public policies;
     mapping(address => uint256[]) public userPolicies;
@@ -87,9 +87,9 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     // ============ Constructor ============
 
-    constructor(address _usdc) Ownable(msg.sender) {
-        require(_usdc != address(0), "QuakeShield: zero address");
-        usdc = IERC20(_usdc);
+    constructor(address _dnzd) Ownable(msg.sender) {
+        require(_dnzd != address(0), "QuakeShield: zero address");
+        dnzd = IERC20(_dnzd);
         oracle = msg.sender;
     }
 
@@ -109,7 +109,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     /**
      * @notice Buy an earthquake insurance policy
-     * @param coverageAmount Payout amount in USDC (6 decimals)
+     * @param coverageAmount Payout amount in DNZD (6 decimals)
      * @param triggerMagnitude Minimum magnitude to trigger payout (scaled by 100)
      * @param centerLat Center latitude (scaled by 1e6)
      * @param centerLng Center longitude (scaled by 1e6)
@@ -129,7 +129,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
         // 1% premium
         uint256 premium = coverageAmount * 10 / 1000;
-        usdc.safeTransferFrom(msg.sender, address(this), premium);
+        dnzd.safeTransferFrom(msg.sender, address(this), premium);
 
         uint256 policyId = policyCounter++;
 
@@ -230,7 +230,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         return (
             totalPremiums,
             totalPayouts,
-            usdc.balanceOf(address(this)),
+            dnzd.balanceOf(address(this)),
             activeCount
         );
     }
@@ -264,7 +264,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
                 p.hasPaidOut = true;
                 p.isActive = false;
                 totalPayouts += p.coverageAmount;
-                usdc.safeTransfer(p.policyholder, p.coverageAmount);
+                dnzd.safeTransfer(p.policyholder, p.coverageAmount);
                 emit PayoutExecuted(i, p.policyholder, p.coverageAmount, magnitude);
             }
         }

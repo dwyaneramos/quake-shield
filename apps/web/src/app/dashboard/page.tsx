@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAccount, useChainId } from "wagmi";
+import { GEONET } from "@/lib/chains";
 function getMagnitudeLabel(magnitude: number): string {
   const labels: Record<number, string> = {
     0: "Micro",
@@ -159,14 +160,14 @@ export default function DashboardPage() {
                             </p>
                             <p className="text-sm text-ink-500">
                               Coverage{" "}
-                              {SCALE.fromUSDC(
+                              {SCALE.fromDNZD(
                                 policy.coverageAmount,
                               ).toLocaleString()}{" "}
-                              USDC · Premium{" "}
-                              {SCALE.fromUSDC(
+                              DNZD · Premium{" "}
+                              {SCALE.fromDNZD(
                                 policy.premiumPaid,
                               ).toLocaleString()}{" "}
-                              USDC
+                              DNZD
                             </p>
                           </div>
                           <span
@@ -201,9 +202,9 @@ export default function DashboardPage() {
                     label="Total Premiums"
                     value={
                       stats
-                        ? `${SCALE.fromUSDC(
+                        ? `${SCALE.fromDNZD(
                             stats.totalPremiums,
-                          ).toLocaleString()} USDC`
+                          ).toLocaleString()} DNZD`
                         : "--"
                     }
                   />
@@ -211,9 +212,9 @@ export default function DashboardPage() {
                     label="Total Payouts"
                     value={
                       stats
-                        ? `${SCALE.fromUSDC(
+                        ? `${SCALE.fromDNZD(
                             stats.totalPayouts,
-                          ).toLocaleString()} USDC`
+                          ).toLocaleString()} DNZD`
                         : "--"
                     }
                   />
@@ -221,9 +222,9 @@ export default function DashboardPage() {
                     label="Pool Balance"
                     value={
                       stats
-                        ? `${SCALE.fromUSDC(
+                        ? `${SCALE.fromDNZD(
                             stats.balance,
-                          ).toLocaleString()} USDC`
+                          ).toLocaleString()} DNZD`
                         : "--"
                     }
                   />
@@ -251,7 +252,7 @@ export default function DashboardPage() {
         <div className="mt-16 text-center text-ink-400 text-xs">
           <p>
             Earthquake data sourced from GeoNet (CC BY 3.0 NZ) &middot; Updated
-            every 30s
+            every {GEONET.POLL_INTERVAL_MS / 1000}s
           </p>
         </div>
       </main>

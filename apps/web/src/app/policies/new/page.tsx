@@ -169,7 +169,7 @@ function MarketPositionCard() {
 
   if (!marketsConfigured) return null;
 
-  const amountIn = SCALE.toUSDC(Number(amount) || 0);
+  const amountIn = SCALE.toDNZD(Number(amount) || 0);
   const previewShares = market ? previewBuy(market.yesReserve, market.noReserve, amountIn, side === "yes") : 0n;
   const yesPct = market ? SCALE.fromOdds(market.yesPrice) * 100 : 0;
   const noPct = 100 - yesPct;
@@ -196,7 +196,7 @@ function MarketPositionCard() {
       ) : step === "done" ? (
         <div>
           <p className="text-sm text-shield-700 mb-1">
-            {side.toUpperCase()} position bought — {SCALE.fromUSDC(previewShares).toLocaleString(undefined, {
+            {side.toUpperCase()} position bought — {SCALE.fromDNZD(previewShares).toLocaleString(undefined, {
               maximumFractionDigits: 4,
             })}{" "}
             shares.
@@ -265,7 +265,7 @@ function MarketPositionCard() {
                 </button>
               </div>
 
-              <label className="block text-xs font-medium text-ink-500 mb-1">Amount (USDC)</label>
+              <label className="block text-xs font-medium text-ink-500 mb-1">Amount (DNZD)</label>
               <input
                 type="number"
                 min={0}
@@ -277,7 +277,7 @@ function MarketPositionCard() {
               <div className="bg-ink-50 rounded-lg p-3 border border-ink-100 text-sm mb-3 flex justify-between">
                 <span className="text-ink-500">Current payout you may get</span>
                 <span className="font-semibold text-shield-700">
-                  {SCALE.fromUSDC(previewShares).toLocaleString(undefined, { maximumFractionDigits: 4 })} USDC
+                  {SCALE.fromDNZD(previewShares).toLocaleString(undefined, { maximumFractionDigits: 4 })} DNZD
                 </span>
               </div>
 
@@ -349,7 +349,7 @@ function BuyPolicyForm() {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     await buyPolicy({
-      coverageAmount: SCALE.toUSDC(coverageNum),
+      coverageAmount: SCALE.toDNZD(coverageNum),
       triggerMagnitude: SCALE.toMagnitude(magnitudeNum),
       centerLat: SCALE.toLatLng(Number(lat)),
       centerLng: SCALE.toLatLng(Number(lng)),
@@ -414,7 +414,7 @@ function BuyPolicyForm() {
             >
               {/* Coverage Amount */}
               <div>
-                <label className="block text-sm font-medium text-ink-700 mb-2">Coverage Amount (USDC)</label>
+                <label className="block text-sm font-medium text-ink-700 mb-2">Coverage Amount (DNZD)</label>
                 <input
                   type="number"
                   min={0}
@@ -422,7 +422,7 @@ function BuyPolicyForm() {
                   onChange={(e) => setCoverage(e.target.value)}
                   className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
                 />
-                <p className="text-sm text-ink-500 mt-1">Premium: 1% of coverage (paid in USDC)</p>
+                <p className="text-sm text-ink-500 mt-1">Premium: 1% of coverage (paid in DNZD)</p>
               </div>
 
               {/* Trigger Magnitude */}
@@ -526,15 +526,15 @@ function BuyPolicyForm() {
             <div className="bg-ink-50 rounded-lg p-4 border border-ink-100 text-sm space-y-1.5">
               <div className="flex justify-between">
                 <span className="text-ink-500">Coverage</span>
-                <span className="font-medium text-ink-900">{coverageNum.toLocaleString()} USDC</span>
+                <span className="font-medium text-ink-900">{coverageNum.toLocaleString()} DNZD</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-ink-500">Payout if triggered</span>
-                <span className="font-semibold text-shield-700">{coverageNum.toLocaleString()} USDC</span>
+                <span className="font-semibold text-shield-700">{coverageNum.toLocaleString()} DNZD</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-ink-500">Premium</span>
-                <span className="font-medium text-ink-900">{premium.toLocaleString()} USDC</span>
+                <span className="font-medium text-ink-900">{premium.toLocaleString()} DNZD</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-ink-500">Trigger</span>
@@ -560,7 +560,7 @@ function BuyPolicyForm() {
               className="w-full bg-shield-600 text-white py-3 rounded-lg font-semibold hover:bg-shield-700 transition-colors"
             >
               {step === "approving"
-                ? "Approving USDC…"
+                ? "Approving DNZD…"
                 : step === "buying"
                 ? "Buying policy…"
                 : paymentPlan === "recurring"
