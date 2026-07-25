@@ -38,26 +38,26 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-white">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_260px] gap-6 items-start">
-          <div className="min-w-0">
-            {/* Seismic Graph + City Widgets */}
-            <HomeClient minMagnitude={magnitudeThreshold} />
+        <div className="max-w-6xl mx-auto">
+          {/* Seismic Graph + Settings Panel + City Widgets */}
+          <HomeClient
+            minMagnitude={magnitudeThreshold}
+            settingsPanel={
+              <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 lg:sticky lg:top-6">
+                <h2 className="text-sm font-semibold text-ink-900 mb-4">
+                  Dashboard Settings
+                </h2>
+                <MagnitudeSlider
+                  value={magnitudeThreshold}
+                  onChange={setMagnitudeThreshold}
+                />
+              </div>
+            }
+          />
 
-            {/* Live Quake Feed */}
-            <div className="mt-6">
-              <DashboardQuakeFeed threshold={magnitudeThreshold} />
-            </div>
-          </div>
-
-          {/* Settings Panel */}
-          <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 lg:sticky lg:top-6">
-            <h2 className="text-sm font-semibold text-ink-900 mb-4">
-              Dashboard Settings
-            </h2>
-            <MagnitudeSlider
-              value={magnitudeThreshold}
-              onChange={setMagnitudeThreshold}
-            />
+          {/* Live Quake Feed */}
+          <div className="mt-6">
+            <DashboardQuakeFeed threshold={magnitudeThreshold} />
           </div>
         </div>
 
