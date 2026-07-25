@@ -15,7 +15,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Header } from "@/components/layout/Header";
 import { isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
@@ -23,6 +22,7 @@ import { getExplorerUrl } from "@/lib/chains";
 import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
 import { getRegionForCity, getNearestRegion } from "@/lib/nzRegions";
 import { SCALE } from "@/types";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const RegionMap = dynamic(
   () => import("@/components/policies/RegionMap").then((mod) => mod.RegionMap),

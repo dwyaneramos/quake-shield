@@ -1,18 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAccount, useChainId } from "wagmi";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { ConnectButton } from "@/components/web3/ConnectButton";
 import { isChainConfigured } from "@/lib/contracts";
 import { getExplorerUrl } from "@/lib/chains";
@@ -28,6 +20,14 @@ import {
 import { NZ_REGIONS } from "@quakeshield/shared";
 import { SCALE } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
+
+const RegionActivityChart = dynamic(
+  () => import("@/components/investments/RegionActivityChart").then((mod) => mod.RegionActivityChart),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-full w-full" />,
+  },
+);
 
 interface TrendPoint {
   time: string;
@@ -230,24 +230,7 @@ export default function RegionInvestmentPage() {
                 </p>
               </div>
               <div className="px-2 pb-2 h-[160px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={activity?.trend ?? []} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="riskGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#f2810c" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="#f2810c" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e9edf3" vertical={false} />
-                    <XAxis dataKey="time" stroke="#aab8cc" tick={{ fill: "#7c8fab", fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis stroke="#aab8cc" tick={{ fill: "#7c8fab", fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} width={30} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "#fff", border: "1px solid #d1dae5", borderRadius: "8px", fontSize: "12px" }}
-                      formatter={(value) => [value, "Quakes"]}
-                    />
-                    <Area type="monotone" dataKey="quakeCount" stroke="#f2810c" strokeWidth={2} fill="url(#riskGrad)" dot={false} activeDot={false} isAnimationActive={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <RegionActivityChart trend={activity?.trend ?? []} />
               </div>
             </div>
 

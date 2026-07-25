@@ -16,6 +16,7 @@ import {
   isChainConfigured,
 } from "@/lib/contracts";
 import { getFriendlyTxErrorMessage } from "@/lib/errors";
+import { estimateGasWithBuffer } from "@/lib/gas";
 import type { InvestmentPosition, Region } from "@/types";
 
 function useQuakeShieldContract() {
@@ -217,18 +218,21 @@ export function useInvest() {
   const invest = useCallback(
     async (regionId: number, amount: bigint) => {
       if (!publicClient) throw new Error("Wallet not connected");
+      if (!address) throw new Error("Wallet not connected");
 
       setError(null);
       setTxHash(undefined);
       try {
         if ((allowance ?? 0n) < amount) {
           setStep("approving");
-          const approveHash = await writeContractAsync({
+          const approveParams = {
             address: DNZD_ADDRESS as `0x${string}`,
             abi: DNZD_ABI,
-            functionName: "approve",
-            args: [QUAKESHIELD_ADDRESS as `0x${string}`, amount],
-          });
+            functionName: "approve" as const,
+            args: [QUAKESHIELD_ADDRESS as `0x${string}`, amount] as const,
+          };
+          const approveGas = await estimateGasWithBuffer(publicClient, { ...approveParams, account: address });
+          const approveHash = await writeContractAsync({ ...approveParams, gas: approveGas });
           const approveReceipt = await publicClient.waitForTransactionReceipt({
             hash: approveHash,
           });
@@ -239,12 +243,14 @@ export function useInvest() {
         }
 
         setStep("investing");
-        const hash = await writeContractAsync({
+        const investParams = {
           address: QUAKESHIELD_ADDRESS as `0x${string}`,
           abi: QUAKESHIELD_ABI,
-          functionName: "invest",
-          args: [BigInt(regionId), amount],
-        });
+          functionName: "invest" as const,
+          args: [BigInt(regionId), amount] as const,
+        };
+        const investGas = await estimateGasWithBuffer(publicClient, { ...investParams, account: address });
+        const hash = await writeContractAsync({ ...investParams, gas: investGas });
         setTxHash(hash);
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status !== "success") {
@@ -259,6 +265,7 @@ export function useInvest() {
       }
     },
     [
+      address,
       allowance,
       publicClient,
       refetchAllowance,
@@ -286,6 +293,7 @@ export type WithdrawStep = "idle" | "withdrawing" | "done" | "error";
 
 /** Withdraw part or all of a region position back to the wallet. */
 export function useWithdrawInvestment() {
+  const { address } = useAccount();
   const chainId = useChainId();
   const { QUAKESHIELD_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
@@ -298,17 +306,20 @@ export function useWithdrawInvestment() {
   const withdraw = useCallback(
     async (regionId: number, amount: bigint) => {
       if (!publicClient) throw new Error("Wallet not connected");
+      if (!address) throw new Error("Wallet not connected");
 
       setError(null);
       setTxHash(undefined);
       try {
         setStep("withdrawing");
-        const hash = await writeContractAsync({
+        const params = {
           address: QUAKESHIELD_ADDRESS as `0x${string}`,
           abi: QUAKESHIELD_ABI,
-          functionName: "withdrawInvestment",
-          args: [BigInt(regionId), amount],
-        });
+          functionName: "withdrawInvestment" as const,
+          args: [BigInt(regionId), amount] as const,
+        };
+        const gas = await estimateGasWithBuffer(publicClient, { ...params, account: address });
+        const hash = await writeContractAsync({ ...params, gas });
         setTxHash(hash);
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status !== "success") {
@@ -321,7 +332,7 @@ export function useWithdrawInvestment() {
         throw e;
       }
     },
-    [publicClient, writeContractAsync, QUAKESHIELD_ADDRESS],
+    [address, publicClient, writeContractAsync, QUAKESHIELD_ADDRESS],
   );
 
   return {
@@ -345,6 +356,7 @@ export function useWithdrawInvestment() {
  * investor never has to wait on it to see interest they're already owed.
  */
 export function useAccrueRegion() {
+  const { address } = useAccount();
   const chainId = useChainId();
   const { QUAKESHIELD_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
@@ -356,16 +368,19 @@ export function useAccrueRegion() {
   const accrue = useCallback(
     async (regionId: number) => {
       if (!publicClient) throw new Error("Wallet not connected");
+      if (!address) throw new Error("Wallet not connected");
 
       setError(null);
       setIsPending(true);
       try {
-        const hash = await writeContractAsync({
+        const params = {
           address: QUAKESHIELD_ADDRESS as `0x${string}`,
           abi: QUAKESHIELD_ABI,
-          functionName: "accrueRegion",
-          args: [BigInt(regionId)],
-        });
+          functionName: "accrueRegion" as const,
+          args: [BigInt(regionId)] as const,
+        };
+        const gas = await estimateGasWithBuffer(publicClient, { ...params, account: address });
+        const hash = await writeContractAsync({ ...params, gas });
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status !== "success") {
           throw new Error("The transaction reverted on-chain.");
@@ -377,7 +392,7 @@ export function useAccrueRegion() {
         setIsPending(false);
       }
     },
-    [publicClient, writeContractAsync, QUAKESHIELD_ADDRESS],
+    [address, publicClient, writeContractAsync, QUAKESHIELD_ADDRESS],
   );
 
   return { accrue, isPending, error };

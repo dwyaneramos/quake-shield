@@ -92,7 +92,7 @@ function buildCQLFilter(query: WFSQuery): string {
     parts.push(`magnitude<=${query.maxMagnitude}`);
   }
 
-  return parts.join("+AND+");
+  return parts.join(" AND ");
 }
 
 /**

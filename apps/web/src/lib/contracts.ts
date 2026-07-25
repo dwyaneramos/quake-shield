@@ -2049,7 +2049,6 @@ export const DNZD_ABI = [
 export interface ChainContracts {
   QUAKESHIELD_ADDRESS: `0x${string}` | "";
   DNZD_ADDRESS: `0x${string}` | "";
-  DNZD_ADDRESS: `0x${string}` | "";
   DEPLOY_BLOCK: bigint;
 }
 
@@ -2076,7 +2075,6 @@ export const CONTRACTS_BY_CHAIN: Record<number, ChainContracts> = {
 const EMPTY_CONTRACTS: ChainContracts = {
   QUAKESHIELD_ADDRESS: "",
   DNZD_ADDRESS: "",
-  DNZD_ADDRESS: "",
   DEPLOY_BLOCK: 0n,
 };
 
@@ -2086,6 +2084,5 @@ export function getContracts(chainId: number | undefined): ChainContracts {
 
 export function isChainConfigured(chainId: number | undefined): boolean {
   const contracts = getContracts(chainId);
-  return Boolean(contracts.QUAKESHIELD_ADDRESS && contracts.DNZD_ADDRESS);
   return Boolean(contracts.QUAKESHIELD_ADDRESS && contracts.DNZD_ADDRESS);
 }
