@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { MOCK_USDC_ABI, getContracts } from "@/lib/contracts";
+import { getFriendlyTxErrorMessage } from "@/lib/errors";
 import { useEarthquakeMarketContract } from "./useEarthquakeMarketContract";
 
 export type BuySharesStep = "idle" | "approving" | "buying" | "done" | "error";
@@ -61,7 +62,7 @@ export function useBuyShares() {
         setStep("done");
       } catch (e) {
         setStep("error");
-        setError(e instanceof Error ? e.message : "Transaction failed");
+        setError(getFriendlyTxErrorMessage(e));
         throw e;
       }
     },

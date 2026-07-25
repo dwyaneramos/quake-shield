@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { usePublicClient, useWriteContract } from "wagmi";
+import { getFriendlyTxErrorMessage } from "@/lib/errors";
 import { useEarthquakeMarketContract } from "./useEarthquakeMarketContract";
 
 export type RedeemStep = "idle" | "redeeming" | "done" | "error";
@@ -34,7 +35,7 @@ export function useRedeem() {
         setStep("done");
       } catch (e) {
         setStep("error");
-        setError(e instanceof Error ? e.message : "Transaction failed");
+        setError(getFriendlyTxErrorMessage(e));
         throw e;
       }
     },

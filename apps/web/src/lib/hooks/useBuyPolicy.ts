@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { MOCK_USDC_ABI, QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
+import { getFriendlyTxErrorMessage } from "@/lib/errors";
 
 export type BuyPolicyStep = "idle" | "approving" | "buying" | "done" | "error";
 
@@ -70,7 +71,7 @@ export function useBuyPolicy() {
         setStep("done");
       } catch (e) {
         setStep("error");
-        setError(e instanceof Error ? e.message : "Transaction failed");
+        setError(getFriendlyTxErrorMessage(e));
         throw e;
       }
     },
