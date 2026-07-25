@@ -58,7 +58,7 @@ export function haversineDistance(
   lat1: number,
   lng1: number,
   lat2: number,
-  lng2: number
+  lng2: number,
 ): number {
   const R = 6371; // Earth's radius in km
   const dLat = toRad(lat2 - lat1);
@@ -110,3 +110,28 @@ export const MMI_LABELS: Record<number, string> = {
   9: "Violent",
   10: "Extreme",
 };
+
+// ============ GeoNet WFS ============
+
+export {
+  GEONET_WFS_BASE_URL,
+  GEONET_REST_BASE_URL,
+  fetchWFSQuakes,
+  fetchRecentQuakesREST,
+  fetchQuakeById,
+  fetchQuakeStats,
+  resolveMarket,
+  quakeMatchesCriteria,
+  haversineDistanceKm,
+  NZ_BOUNDS,
+  NZ_REGIONS,
+} from "./geonet-wfs.js";
+
+export type {
+  GeoNetQuake,
+  BoundingBox,
+  WFSQuery,
+  MarketCriteria,
+  MarketResolution,
+  QuakeStats,
+} from "./geonet-wfs.js";

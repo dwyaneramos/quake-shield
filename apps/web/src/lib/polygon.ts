@@ -25,7 +25,7 @@ export const POLYGON_AMOY = {
 export const GEONET = {
   BASE_URL: "https://api.geonet.org.nz",
   QUAKE_ENDPOINT: "/quake",
-  MMI_THRESHOLD: 4, // Minimum intensity to fetch
+  MMI_THRESHOLD: -1, // -1 = all quakes (even too small for MMI calculation)
   POLL_INTERVAL_MS: 30_000,
 } as const;
 

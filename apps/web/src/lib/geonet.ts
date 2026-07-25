@@ -1,68 +1,61 @@
 import { GEONET } from "@/lib/polygon";
 import type { GeoNetQuake } from "@/types";
+import {
+  fetchRecentQuakesREST,
+  fetchQuakeById as fetchQuakeByIdWFS,
+  fetchWFSQuakes,
+  fetchQuakeStats as fetchQuakeStatsWFS,
+  resolveMarket as resolveMarketWFS,
+  type BoundingBox,
+  type WFSQuery,
+  type MarketCriteria,
+  type MarketResolution,
+  type QuakeStats,
+} from "@quakeshield/shared";
 
 /**
- * Fetch recent earthquakes from GeoNet API
- * Endpoint: GET /quake?MMI={threshold}
+ * Fetch recent earthquakes from GeoNet REST API (legacy wrapper)
  */
 export async function fetchRecentQuakes(mmi: number = GEONET.MMI_THRESHOLD): Promise<GeoNetQuake[]> {
-  const response = await fetch(`${GEONET.BASE_URL}/quake?MMI=${mmi}`, {
-    headers: {
-      Accept: "application/vnd.geo+json;version=2",
-    },
-    next: { revalidate: 30 }, // Cache for 30 seconds
-  });
-
-  if (!response.ok) {
-    throw new Error(`GeoNet API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  // GeoNet returns GeoJSON FeatureCollection
-  return (data.features || []).map((feature: any) => ({
-    publicID: feature.properties.publicID,
-    time: feature.properties.time,
-    depth: feature.properties.depth,
-    magnitude: feature.properties.magnitude,
-    locality: feature.properties.locality,
-    mmi: feature.properties.mmi,
-    quality: feature.properties.quality,
-    latitude: feature.geometry?.coordinates?.[1],
-    longitude: feature.geometry?.coordinates?.[0],
-  }));
+  return fetchRecentQuakesREST(mmi);
 }
 
 /**
  * Fetch a single earthquake by publicID
  */
 export async function fetchQuakeById(publicID: string): Promise<GeoNetQuake> {
-  const response = await fetch(`${GEONET.BASE_URL}/quake/${publicID}`, {
-    headers: {
-      Accept: "application/vnd.geo+json;version=2",
-    },
-  });
+  return fetchQuakeByIdWFS(publicID);
+}
 
-  if (!response.ok) {
-    throw new Error(`GeoNet API error: ${response.status}`);
-  }
+/**
+ * Fetch earthquakes via WFS with advanced filtering
+ */
+export async function fetchQuakesByRegion(query: WFSQuery): Promise<GeoNetQuake[]> {
+  return fetchWFSQuakes(query);
+}
 
-  const data = await response.json();
-  const feature = data.features?.[0];
+/**
+ * Fetch GeoNet earthquake statistics (7/28/365-day counts + daily rate)
+ */
+export async function fetchQuakeStats(): Promise<QuakeStats> {
+  return fetchQuakeStatsWFS();
+}
 
-  if (!feature) {
-    throw new Error(`Quake not found: ${publicID}`);
-  }
+/**
+ * Resolve a prediction market against live GeoNet data
+ */
+export async function checkMarketResolution(criteria: MarketCriteria): Promise<MarketResolution> {
+  return resolveMarketWFS(criteria);
+}
 
+/**
+ * Build a bounding box from center point + radius in km
+ */
+export function bboxFromRadius(centerLat: number, centerLng: number, radiusKm: number): BoundingBox {
   return {
-    publicID: feature.properties.publicID,
-    time: feature.properties.time,
-    depth: feature.properties.depth,
-    magnitude: feature.properties.magnitude,
-    locality: feature.properties.locality,
-    mmi: feature.properties.mmi,
-    quality: feature.properties.quality,
-    latitude: feature.geometry?.coordinates?.[1],
-    longitude: feature.geometry?.coordinates?.[0],
+    west: centerLng - radiusKm / 83,
+    east: centerLng + radiusKm / 83,
+    south: centerLat - radiusKm / 111,
+    north: centerLat + radiusKm / 111,
   };
 }
