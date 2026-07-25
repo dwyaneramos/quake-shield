@@ -26,6 +26,8 @@ export interface Policy {
   isActive: boolean;
   hasPaidOut: boolean;
   createdAt: bigint;
+  isRecurring: boolean;
+  periodEnd: bigint;
 }
 
 // Formatted policy for UI display

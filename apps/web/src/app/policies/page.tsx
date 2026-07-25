@@ -6,6 +6,7 @@ import { useAccount, useChainId } from "wagmi";
 import { ConnectButton } from "@/components/web3/ConnectButton";
 import { useUserPolicies } from "@/lib/hooks/useQuakeShield";
 import { useClaims } from "@/lib/hooks/useClaims";
+import { useRenewPolicy } from "@/lib/hooks/useRenewPolicy";
 import { getContracts } from "@/lib/contracts";
 import { getExplorerUrl } from "@/lib/chains";
 import { SCALE } from "@/types";
@@ -31,6 +32,58 @@ function formatDate(ts: bigint): string {
   });
 }
 
+function formatTimeLeft(periodEnd: bigint): string {
+  const msLeft = Number(periodEnd) * 1000 - Date.now();
+  if (msLeft <= 0) return "expired";
+  const days = Math.floor(msLeft / (24 * 60 * 60 * 1000));
+  if (days >= 1) return `${days}d left`;
+  const hours = Math.max(1, Math.floor(msLeft / (60 * 60 * 1000)));
+  return `${hours}h left`;
+}
+
+/** Renew button for a single recurring policy — pays the next 14-day premium. */
+function RenewButton({
+  policyId,
+  coverageAmount,
+  onRenewed,
+}: {
+  policyId: bigint;
+  coverageAmount: bigint;
+  onRenewed: () => void;
+}) {
+  const { renewPolicy, step, error, isPending, reset } = useRenewPolicy();
+
+  if (step === "done") {
+    return <span className="text-xs font-medium text-shield-700">Renewed ✓</span>;
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() => {
+          renewPolicy(policyId, coverageAmount)
+            .then(() => onRenewed())
+            .catch(() => {});
+        }}
+        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-shield-600 text-white hover:bg-shield-700 transition-colors disabled:opacity-50"
+      >
+        {step === "approving" ? "Approving…" : step === "renewing" ? "Renewing…" : "Renew"}
+      </button>
+      {error && (
+        <button
+          type="button"
+          onClick={reset}
+          className="text-xs text-quake-700 max-w-[16rem] text-right"
+        >
+          {error}
+        </button>
+      )}
+    </div>
+  );
+}
+
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "active", label: "Active" },
@@ -42,7 +95,7 @@ export default function PoliciesPage() {
   const chainId = useChainId();
   const { QUAKESHIELD_ADDRESS } = getContracts(chainId);
   const explorerUrl = getExplorerUrl(chainId);
-  const { policies, isLoading } = useUserPolicies();
+  const { policies, isLoading, refetch } = useUserPolicies();
   const { claims, isLoading: claimsLoading, error: claimsError } = useClaims();
   const [tab, setTab] = useState<Tab>("policies");
   const [filter, setFilter] = useState<Filter>("all");
@@ -182,6 +235,11 @@ export default function PoliciesPage() {
                           : policy.isActive
                             ? "active"
                             : "inactive";
+                        const isExpired =
+                          policy.periodEnd > 0n &&
+                          Number(policy.periodEnd) * 1000 < Date.now();
+                        const showRenew =
+                          policy.isRecurring && status === "active" && !isExpired;
 
                         return (
                           <div key={policy.id.toString()} className="p-5">
@@ -216,6 +274,18 @@ export default function PoliciesPage() {
                                   >
                                     {status === "paid" ? "Paid Out" : status === "active" ? "Active" : "Inactive"}
                                   </span>
+                                  {status !== "paid" && (
+                                    <span
+                                      className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                                        isExpired
+                                          ? "bg-quake-100 text-quake-700"
+                                          : "bg-ink-100 text-ink-500"
+                                      }`}
+                                    >
+                                      {policy.isRecurring ? "Fortnightly" : "One-off"} ·{" "}
+                                      {formatTimeLeft(policy.periodEnd)}
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-sm text-ink-500">
@@ -248,6 +318,14 @@ export default function PoliciesPage() {
                                   )}
                                 </div>
                               </div>
+
+                              {showRenew && (
+                                <RenewButton
+                                  policyId={policy.id}
+                                  coverageAmount={policy.coverageAmount}
+                                  onRenewed={refetch}
+                                />
+                              )}
                             </div>
                           </div>
                         );

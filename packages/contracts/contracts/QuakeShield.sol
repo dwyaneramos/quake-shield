@@ -28,6 +28,8 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         bool isActive;
         bool hasPaidOut;
         uint256 createdAt;
+        bool isRecurring;         // Fortnightly premium plan vs one-off
+        uint256 periodEnd;        // Coverage lapses at this timestamp unless renewed (one-off policies can't renew)
     }
 
     struct QuakeEvent {
@@ -58,6 +60,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
     uint256 public totalActiveCoverage;
     uint256 public constant MAX_COVERAGE_PER_POLICY = 10_000e6; // 10,000 DNZD
     uint256 public constant MIN_RESERVE_RATIO_BPS = 15000;      // 150% (15000 basis points)
+    uint256 public constant RENEWAL_PERIOD = 14 days;           // Fortnightly recurring plan
 
     mapping(address => uint256) public providerShares;
     uint256 public totalShares;
@@ -77,6 +80,15 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         uint256 amount,
         uint256 quakeMagnitude
     );
+
+    event PolicyRenewed(
+        uint256 indexed policyId,
+        address indexed policyholder,
+        uint256 premium,
+        uint256 newPeriodEnd
+    );
+
+    event PolicyLapsed(uint256 indexed policyId, address indexed policyholder);
 
     event QuakeRecorded(
         uint256 indexed quakeId,
@@ -175,6 +187,9 @@ contract QuakeShield is Ownable, ReentrancyGuard {
      * @param centerLat Center latitude (scaled by 1e6)
      * @param centerLng Center longitude (scaled by 1e6)
      * @param radiusKm Radius in km from center
+     * @param recurring If true, premium is billed every RENEWAL_PERIOD via renewPolicy() instead of once.
+     *        Either way coverage only runs for RENEWAL_PERIOD from purchase — a one-off policy simply
+     *        cannot be renewed, so it lapses at periodEnd, while a recurring policy keeps extending.
      * @return policyId The new policy ID
      */
     function buyPolicy(
@@ -182,11 +197,12 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         uint256 triggerMagnitude,
         int256 centerLat,
         int256 centerLng,
-        uint256 radiusKm
+        uint256 radiusKm,
+        bool recurring
     ) external nonReentrant returns (uint256) {
         require(coverageAmount > 0, "QuakeShield: coverage must be > 0");
         require(coverageAmount <= MAX_COVERAGE_PER_POLICY, "QuakeShield: exceeds max coverage");
-        require(triggerMagnitude >= 400, "QuakeShield: minimum magnitude is 4.0");
+        require(triggerMagnitude >= 500, "QuakeShield: minimum magnitude is 5.0");
         require(radiusKm > 0 && radiusKm <= 500, "QuakeShield: radius must be 1-500km");
 
         // Solvency check: pool must have 150% reserve ratio after this policy
@@ -214,7 +230,9 @@ contract QuakeShield is Ownable, ReentrancyGuard {
             radiusKm: radiusKm,
             isActive: true,
             hasPaidOut: false,
-            createdAt: block.timestamp
+            createdAt: block.timestamp,
+            isRecurring: recurring,
+            periodEnd: block.timestamp + RENEWAL_PERIOD
         });
 
         userPolicies[msg.sender].push(policyId);
@@ -223,6 +241,55 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
         emit PolicyPurchased(policyId, msg.sender, coverageAmount, premium);
         return policyId;
+    }
+
+    /**
+     * @notice Pay the next fortnightly premium on a recurring policy, extending its coverage
+     * @dev Only the policyholder can renew; they must have approved at least one premium's worth of DNZD.
+     *      Renewing early (before periodEnd) simply extends from the current periodEnd rather than now,
+     *      so paying ahead of time never shortens the covered window.
+     * @param policyId The policy to renew
+     */
+    function renewPolicy(uint256 policyId) external nonReentrant {
+        Policy storage p = policies[policyId];
+
+        require(p.policyholder == msg.sender, "QuakeShield: not the policyholder");
+        require(p.isRecurring, "QuakeShield: not a recurring policy");
+        require(p.isActive && !p.hasPaidOut, "QuakeShield: policy not active");
+        require(
+            block.timestamp <= p.periodEnd + RENEWAL_PERIOD,
+            "QuakeShield: policy lapsed, buy a new one"
+        );
+
+        uint256 premium = p.coverageAmount * 10 / 1000;
+        DNZD.safeTransferFrom(msg.sender, address(this), premium);
+
+        uint256 renewFrom = block.timestamp > p.periodEnd ? block.timestamp : p.periodEnd;
+        p.periodEnd = renewFrom + RENEWAL_PERIOD;
+        p.premiumPaid += premium;
+        totalPremiums += premium;
+
+        emit PolicyRenewed(policyId, msg.sender, premium, p.periodEnd);
+    }
+
+    /**
+     * @notice Deactivate a policy whose coverage period has ended without renewal, freeing its
+     *         reserved capital — applies to one-off policies (which can never renew) as much as
+     *         to recurring ones that missed a renewal
+     * @dev Callable by anyone — claims already ignore policies past periodEnd (see _processClaims),
+     *      this just settles totalActiveCoverage/isActive bookkeeping on-chain.
+     * @param policyId The lapsed policy to close out
+     */
+    function lapsePolicy(uint256 policyId) external {
+        Policy storage p = policies[policyId];
+
+        require(p.isActive && !p.hasPaidOut, "QuakeShield: policy not active");
+        require(block.timestamp > p.periodEnd, "QuakeShield: policy not expired");
+
+        p.isActive = false;
+        totalActiveCoverage -= p.coverageAmount;
+
+        emit PolicyLapsed(policyId, p.policyholder);
     }
 
     // ============ Oracle Functions ============
@@ -280,6 +347,15 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     function getQuake(uint256 quakeId) external view returns (QuakeEvent memory) {
         return recordedQuakes[quakeId];
+    }
+
+    /**
+     * @notice Whether a policy's coverage period has ended — for a one-off policy this means its
+     *         single 14-day term is up, for a recurring policy it means a renewal was missed
+     */
+    function isPolicyExpired(uint256 policyId) external view returns (bool) {
+        Policy storage p = policies[policyId];
+        return block.timestamp > p.periodEnd;
     }
 
     function getPoolStats()
@@ -350,6 +426,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
             Policy storage p = policies[i];
 
             if (!p.isActive || p.hasPaidOut) continue;
+            if (block.timestamp > p.periodEnd) continue;
             if (magnitude < p.triggerMagnitude) continue;
 
             // Calculate distance between policy center and quake epicenter

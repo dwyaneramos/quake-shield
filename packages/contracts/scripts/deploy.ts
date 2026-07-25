@@ -5,9 +5,9 @@ async function main() {
   console.log("Deploying with account:", deployer.address);
   console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(deployer.address)));
 
-  // If DNZD_ADDRESS_<NETWORK> is set (e.g. NewMoney's real dNZD token),
+  // If USDC_ADDRESS_<NETWORK> is set (the existing mock/real USDC token),
   // point QuakeShield at that instead of deploying a fresh MockDNZD.
-  const externalTokenAddress = process.env[`DNZD_ADDRESS_${network.name.toUpperCase()}`];
+  const externalTokenAddress = process.env[`USDC_ADDRESS_${network.name.toUpperCase()}`];
 
   let DNZDAddress: string;
   if (externalTokenAddress) {

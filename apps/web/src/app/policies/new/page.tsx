@@ -35,15 +35,17 @@ const RegionMap = dynamic(
 
 const MAX_COVERAGE_DNZD = 10_000;
 
-const REGIONS = [
-  ...NZ_CITIES.map((c) => ({
-    label: c.name,
-    id: c.id,
-    lat: c.lat,
-    lng: c.lng,
-  })),
-  { label: "Custom location", id: "custom", lat: null, lng: null },
-] as const;
+// Policies trigger on any GeoNet quake M5.0+ within CITY_RADIUS_KM of the
+// chosen region — not user-configurable, so risk terms stay consistent
+// across the pool.
+const TRIGGER_MAGNITUDE = 5.0;
+
+const REGIONS = NZ_CITIES.map((c) => ({
+  label: c.name,
+  id: c.id,
+  lat: c.lat,
+  lng: c.lng,
+}));
 
 interface TrendPoint {
   time: string;
@@ -172,7 +174,7 @@ function CityMiniGraph({ cityId }: { cityId: string }) {
   );
 }
 
-let magnitudeDisplay = "6.0";
+const magnitudeDisplay = TRIGGER_MAGNITUDE.toFixed(1);
 
 function BuyPolicyForm() {
   const searchParams = useSearchParams();
@@ -196,15 +198,10 @@ function BuyPolicyForm() {
     "onetime",
   );
   const [regionIndex, setRegionIndex] = useState(initialIndex);
-  const [customLat, setCustomLat] = useState("-41.2865");
-  const [customLng, setCustomLng] = useState("174.7762");
   const [coverage, setCoverage] = useState("1000");
-  const [magnitude, setMagnitude] = useState("6.0");
-  const [radius, setRadius] = useState("50");
-
-  magnitudeDisplay = magnitude;
 
   const region = REGIONS[regionIndex];
+<<<<<<< Updated upstream
   const isCustom = region.lat === null;
   const lat = isCustom ? customLat : String(region.lat);
   const lng = isCustom ? customLng : String(region.lng);
@@ -214,23 +211,21 @@ function BuyPolicyForm() {
   const nzRegion = isCustom
     ? getNearestRegion(latNum, lngNum)
     : getRegionForCity(region.id);
+=======
+  const lat = String(region.lat);
+  const lng = String(region.lng);
+  const selectedCityId = region.id;
+>>>>>>> Stashed changes
 
   const coverageNum = Number(coverage) || 0;
-  const magnitudeNum = Number(magnitude) || 0;
-  const radiusNum = Number(radius) || 0;
   const premium = coverageNum * 0.01;
 
   const validation = useMemo(() => {
     if (coverageNum <= 0) return "Coverage must be greater than 0";
     if (coverageNum > MAX_COVERAGE_DNZD)
       return `Maximum coverage is ${MAX_COVERAGE_DNZD.toLocaleString()} DNZD`;
-    if (magnitudeNum < 4.0) return "Minimum trigger magnitude is 4.0";
-    if (radiusNum <= 0 || radiusNum > 500)
-      return "Radius must be between 1 and 500km";
-    if (!lat || !lng || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng)))
-      return "Enter a valid latitude/longitude";
     return null;
-  }, [coverageNum, magnitudeNum, radiusNum, lat, lng]);
+  }, [coverageNum]);
 
   const canSubmit = isConnected && chainConfigured && !validation && !isPending;
 
@@ -238,10 +233,11 @@ function BuyPolicyForm() {
     if (!canSubmit) return;
     await buyPolicy({
       coverageAmount: SCALE.toDNZD(coverageNum),
-      triggerMagnitude: SCALE.toMagnitude(magnitudeNum),
+      triggerMagnitude: SCALE.toMagnitude(TRIGGER_MAGNITUDE),
       centerLat: SCALE.toLatLng(Number(lat)),
       centerLng: SCALE.toLatLng(Number(lng)),
-      radiusKm: BigInt(Math.round(radiusNum)),
+      radiusKm: BigInt(CITY_RADIUS_KM),
+      recurring: paymentPlan === "recurring",
     }).catch(() => {});
   };
 
@@ -252,7 +248,9 @@ function BuyPolicyForm() {
           Buy Earthquake Policy
         </h1>
         <p className="text-ink-600 mb-8">
-          Set your trigger conditions and coverage amount.
+          Choose your coverage amount and region. Every policy pays out
+          automatically on any GeoNet quake M{TRIGGER_MAGNITUDE.toFixed(1)}+
+          within {CITY_RADIUS_KM}km of your region.
         </p>
 
         {!chainConfigured && (
@@ -285,7 +283,10 @@ function BuyPolicyForm() {
             </h2>
             <p className="text-ink-600 mb-6">
               You&rsquo;re covered. You&rsquo;ll be paid automatically if the
-              trigger fires.
+              trigger fires.{" "}
+              {paymentPlan === "recurring"
+                ? "Come back to Policies every 14 days to renew — coverage lapses if the premium isn't paid."
+                : "Coverage runs for 14 days and then expires — buy a new policy or switch to Recurring to keep it going."}
             </p>
             {buyTxHash && (
               <a
@@ -353,34 +354,28 @@ function BuyPolicyForm() {
                   )}
                 </div>
 
-                {/* Trigger Magnitude */}
+                {/* Trigger Magnitude (fixed, not user-configurable) */}
                 <div>
                   <label className="block text-sm font-medium text-ink-700 mb-2">
                     Minimum Trigger Magnitude
                   </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min={4}
-                    value={magnitude}
-                    onChange={(e) => setMagnitude(e.target.value)}
-                    className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-                  />
+                  <div className="w-full border border-ink-200 bg-ink-50 rounded-lg px-4 py-3 text-ink-700 font-medium">
+                    M{TRIGGER_MAGNITUDE.toFixed(1)}
+                  </div>
                   <p className="text-sm text-ink-500 mt-1">
-                    Payout triggers when earthquake magnitude meets or exceeds
-                    this value (min 4.0)
+                    Fixed for every policy — not user-adjustable.
                   </p>
                 </div>
 
                 {/* Location */}
                 <div>
                   <label className="block text-sm font-medium text-ink-700 mb-2">
-                    Coverage Center
+                    Coverage Region
                   </label>
                   <select
                     value={regionIndex}
                     onChange={(e) => setRegionIndex(Number(e.target.value))}
-                    className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500 mb-3"
+                    className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
                   >
                     {REGIONS.map((r, i) => (
                       <option key={r.label} value={i}>
@@ -388,34 +383,10 @@ function BuyPolicyForm() {
                       </option>
                     ))}
                   </select>
-                  {isCustom && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-ink-500 mb-1">
-                          Latitude
-                        </label>
-                        <input
-                          type="number"
-                          step="0.0001"
-                          value={customLat}
-                          onChange={(e) => setCustomLat(e.target.value)}
-                          className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-ink-500 mb-1">
-                          Longitude
-                        </label>
-                        <input
-                          type="number"
-                          step="0.0001"
-                          value={customLng}
-                          onChange={(e) => setCustomLng(e.target.value)}
-                          className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <p className="text-sm text-ink-500 mt-1">
+                    Payout triggers on any qualifying quake within{" "}
+                    {CITY_RADIUS_KM}km of this region.
+                  </p>
                 </div>
 
                 {/* Payment Plan */}
@@ -449,24 +420,9 @@ function BuyPolicyForm() {
                   </div>
                   <p className="text-xs text-ink-500 mt-1">
                     {paymentPlan === "onetime"
-                      ? "Pay the premium once for this coverage period."
-                      : "Premium is paid each coverage period — come back to renew, or approve ahead of time."}
+                      ? "Pay the premium once; coverage runs for 14 days and then expires — it can't be renewed."
+                      : "1% premium billed every 14 days. Renew from Policies before it lapses, or approve a larger allowance upfront so you just need to click renew."}
                   </p>
-                </div>
-
-                {/* Radius */}
-                <div>
-                  <label className="block text-sm font-medium text-ink-700 mb-1.5">
-                    Radius (km)
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={500}
-                    value={radius}
-                    onChange={(e) => setRadius(e.target.value)}
-                    className="w-full border border-ink-200 rounded-lg px-3 py-2.5 text-sm text-ink-900 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-                  />
                 </div>
 
                 {/* Summary */}
@@ -487,16 +443,25 @@ function BuyPolicyForm() {
                     <span className="text-ink-500">Premium</span>
                     <span className="font-medium text-ink-900">
                       {premium.toLocaleString()} DNZD
+                      {paymentPlan === "recurring" ? " / 14 days" : ""}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-ink-500">Coverage period</span>
+                    <span className="font-medium text-ink-900">
+                      {paymentPlan === "recurring"
+                        ? "14 days, auto-renews"
+                        : "14 days, then expires"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-ink-500">Trigger</span>
                     <span className="font-medium text-ink-900">
-                      M≥{magnitudeNum.toFixed(1)} · {radiusNum}km
+                      M≥{TRIGGER_MAGNITUDE.toFixed(1)} · {CITY_RADIUS_KM}km
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-ink-500">Location</span>
+                    <span className="text-ink-500">Region</span>
                     <span className="font-medium text-ink-900">
                       {region.label}
                     </span>
@@ -529,7 +494,7 @@ function BuyPolicyForm() {
                     : step === "buying"
                     ? "Buying policy…"
                     : paymentPlan === "recurring"
-                    ? "Subscribe to Policy"
+                    ? "Subscribe (fortnightly)"
                     : "Buy Policy"}
                 </button>
               </form>
@@ -539,7 +504,7 @@ function BuyPolicyForm() {
             <div className="lg:col-span-3">
               <div className="mb-3">
                 <h2 className="text-lg font-bold text-ink-900">
-                  {isCustom ? "Custom Location" : region.label}
+                  {region.label}
                 </h2>
                 <p className="text-ink-500 text-sm">
                   Live seismic data for this area

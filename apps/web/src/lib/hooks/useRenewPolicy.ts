@@ -5,52 +5,43 @@ import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContr
 import { MOCK_USDC_ABI, QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
 import { getFriendlyTxErrorMessage } from "@/lib/errors";
 
-export type BuyPolicyStep = "idle" | "approving" | "buying" | "done" | "error";
+export type RenewPolicyStep = "idle" | "approving" | "renewing" | "done" | "error";
 
-export interface BuyPolicyInput {
-  coverageAmount: bigint; // USDC, 6 decimals
-  triggerMagnitude: bigint; // x100
-  centerLat: bigint; // x1e6
-  centerLng: bigint; // x1e6
-  radiusKm: bigint;
-  recurring: boolean; // fortnightly premium plan vs one-off
-}
-
-/** Buying a policy is two on-chain transactions: approve the premium spend, then buyPolicy. */
-export function useBuyPolicy() {
+/** Pay the next fortnightly premium on a recurring policy: approve the premium spend, then renewPolicy(). */
+export function useRenewPolicy() {
   const { address } = useAccount();
   const chainId = useChainId();
-  const { QUAKESHIELD_ADDRESS, DNZD_ADDRESS } = getContracts(chainId);
+  const { QUAKESHIELD_ADDRESS, USDC_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
-  const [step, setStep] = useState<BuyPolicyStep>("idle");
+  const [step, setStep] = useState<RenewPolicyStep>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [buyTxHash, setBuyTxHash] = useState<`0x${string}` | undefined>();
+  const [renewTxHash, setRenewTxHash] = useState<`0x${string}` | undefined>();
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: DNZD_ADDRESS as `0x${string}`,
+    address: USDC_ADDRESS as `0x${string}`,
     abi: MOCK_USDC_ABI,
     functionName: "allowance",
     args: address ? [address, QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
-    query: { enabled: Boolean(address && DNZD_ADDRESS) },
+    query: { enabled: Boolean(address && USDC_ADDRESS) },
   });
 
   const { writeContractAsync } = useWriteContract();
 
-  const buyPolicy = useCallback(
-    async (input: BuyPolicyInput) => {
+  const renewPolicy = useCallback(
+    async (policyId: bigint, coverageAmount: bigint) => {
       if (!publicClient) throw new Error("Wallet not connected");
 
       setError(null);
-      setBuyTxHash(undefined);
+      setRenewTxHash(undefined);
       try {
-        // 1% premium — see QuakeShield.sol buyPolicy()
-        const premium = (input.coverageAmount * 10n) / 1000n;
+        // 1% premium — matches QuakeShield.sol renewPolicy()
+        const premium = (coverageAmount * 10n) / 1000n;
         const currentAllowance = allowance ?? 0n;
 
         if (currentAllowance < premium) {
           setStep("approving");
           const approveHash = await writeContractAsync({
-            address: DNZD_ADDRESS as `0x${string}`,
+            address: USDC_ADDRESS as `0x${string}`,
             abi: MOCK_USDC_ABI,
             functionName: "approve",
             args: [QUAKESHIELD_ADDRESS as `0x${string}`, premium],
@@ -62,21 +53,14 @@ export function useBuyPolicy() {
           await refetchAllowance();
         }
 
-        setStep("buying");
+        setStep("renewing");
         const hash = await writeContractAsync({
           address: QUAKESHIELD_ADDRESS as `0x${string}`,
           abi: QUAKESHIELD_ABI,
-          functionName: "buyPolicy",
-          args: [
-            input.coverageAmount,
-            input.triggerMagnitude,
-            input.centerLat,
-            input.centerLng,
-            input.radiusKm,
-            input.recurring,
-          ],
+          functionName: "renewPolicy",
+          args: [policyId],
         });
-        setBuyTxHash(hash);
+        setRenewTxHash(hash);
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status !== "success") {
           throw new Error("The transaction reverted on-chain.");
@@ -89,19 +73,19 @@ export function useBuyPolicy() {
         throw e;
       }
     },
-    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, DNZD_ADDRESS]
+    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, USDC_ADDRESS]
   );
 
   return {
-    buyPolicy,
+    renewPolicy,
     step,
     error,
-    isPending: step === "approving" || step === "buying",
-    buyTxHash,
+    isPending: step === "approving" || step === "renewing",
+    renewTxHash,
     reset: () => {
       setStep("idle");
       setError(null);
-      setBuyTxHash(undefined);
+      setRenewTxHash(undefined);
     },
   };
 }
