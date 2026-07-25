@@ -125,8 +125,21 @@ export {
   quakeMatchesCriteria,
   haversineDistanceKm,
   NZ_BOUNDS,
-  NZ_REGIONS,
 } from "./geonet-wfs";
+
+// ============ NZ Regions ============
+
+export {
+  NZ_REGIONS,
+  getRegionById,
+  getRegionByName,
+  getRegionIndexByName,
+  isInRegion,
+  regionsForPoint,
+  regionCenter,
+} from "./regions";
+
+export type { NZRegion } from "./regions";
 
 export type {
   GeoNetQuake,

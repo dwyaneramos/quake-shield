@@ -25,7 +25,6 @@ import { SCALE } from "@/types";
 import HomeClient from "@/components/landing/HomeClient";
 import DashboardQuakeFeed from "@/components/quakes/DashboardQuakeFeed";
 import MagnitudeSlider from "@/components/landing/MagnitudeSlider";
-import { MarketsSection } from "@/components/dashboard/MarketsSection";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function DashboardPage() {
@@ -102,9 +101,6 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              {/* Earthquake Markets */}
-              <MarketsSection />
-
               {/* Your Policies */}
               <div className="bg-white rounded-xl shadow-sm border border-ink-100 mb-6">
                 <div className="p-6 border-b border-ink-100 flex justify-between items-center">
@@ -324,9 +320,9 @@ export default function DashboardPage() {
               }
             />
             <QuickAction
-              href="/providers"
-              title="Capital Providers"
-              description="Deposit DNZD and earn yield from premiums"
+              href="/investments"
+              title="Invest in a Region"
+              description="Back a region against quakes and earn fortnightly returns"
               icon={
                 <svg
                   className="w-6 h-6"

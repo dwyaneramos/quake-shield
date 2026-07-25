@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useChainId, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount, useChainId, usePublicClient, useWriteContract } from "wagmi";
 import { QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
 import { getFriendlyTxErrorMessage } from "@/lib/errors";
+import { estimateGasWithBuffer } from "@/lib/gas";
 
 export type SimulateEarthquakeStep = "idle" | "recording" | "done" | "error";
 
@@ -22,6 +23,7 @@ export interface SimulateEarthquakeInput {
  * configured oracle address for this deployment.
  */
 export function useSimulateEarthquake() {
+  const { address } = useAccount();
   const chainId = useChainId();
   const { QUAKESHIELD_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
@@ -34,17 +36,20 @@ export function useSimulateEarthquake() {
   const simulateEarthquake = useCallback(
     async (input: SimulateEarthquakeInput) => {
       if (!publicClient) throw new Error("Wallet not connected");
+      if (!address) throw new Error("Wallet not connected");
 
       setError(null);
       setTxHash(undefined);
       setStep("recording");
       try {
-        const hash = await writeContractAsync({
+        const params = {
           address: QUAKESHIELD_ADDRESS as `0x${string}`,
           abi: QUAKESHIELD_ABI,
-          functionName: "recordEarthquake",
-          args: [input.magnitude, input.latitude, input.longitude, input.depth, input.publicId],
-        });
+          functionName: "recordEarthquake" as const,
+          args: [input.magnitude, input.latitude, input.longitude, input.depth, input.publicId] as const,
+        };
+        const gas = await estimateGasWithBuffer(publicClient, { ...params, account: address });
+        const hash = await writeContractAsync({ ...params, gas });
         setTxHash(hash);
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status !== "success") {
@@ -57,7 +62,7 @@ export function useSimulateEarthquake() {
         throw e;
       }
     },
-    [publicClient, writeContractAsync, QUAKESHIELD_ADDRESS]
+    [address, publicClient, writeContractAsync, QUAKESHIELD_ADDRESS]
   );
 
   return {

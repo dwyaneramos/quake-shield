@@ -36,7 +36,8 @@ export function usePoolStats() {
         balance: data[2],
         activePolicies: data[3],
         totalActiveCoverage: data[4],
-        totalShares: data[5],
+        totalInvested: data[5],
+        yieldReserve: data[6],
       }
     : isLoading
     ? undefined

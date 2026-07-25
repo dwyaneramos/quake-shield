@@ -1,14 +1,30 @@
-import { fetchRecentQuakes, magnitudeToScaled, latLngToScaled } from "./geonet.js";
+import {
+  fetchRecentQuakes,
+  fetchWFSQuakes,
+  magnitudeToScaled,
+  latLngToScaled,
+} from "./geonet.js";
 import {
   recordEarthquake,
   isQuakeRecorded,
-  getRecordedQuakes,
-  getUnresolvedMarkets,
-  submitMarketResolution,
+  getRegions,
+  submitRiskScores,
+  runAccrual,
+  getAccrualPeriodSeconds,
 } from "./signer.js";
+import { computeRiskScoreBps, countQuakesInRegion, RISK_MIN_MAGNITUDE } from "./risk.js";
 import { env } from "./config.js";
 
 const submittedQuakes = new Set<string>();
+
+/**
+ * Only rewrite a region's risk score when it has moved enough to matter — a
+ * few basis points either way isn't worth a transaction.
+ */
+const RISK_UPDATE_THRESHOLD_BPS = 50;
+
+let lastRiskRefreshAt = 0;
+let lastAccrualCheckAt = 0;
 
 async function pollAndRecord(): Promise<void> {
   try {
@@ -48,52 +64,83 @@ async function pollAndRecord(): Promise<void> {
 }
 
 /**
- * Mirrors EarthquakeMarket.sol's simplified (non-Haversine) MVP distance
- * check exactly, in BigInt, so this pre-check agrees with what the on-chain
- * resolveMarket() call will itself verify.
+ * Recompute every region's risk score from GeoNet's full quake history and
+ * push the ones that have moved.
+ *
+ * This is what makes an investment's return dynamic: a region that has been
+ * shaking lately scores higher, and the contract turns that score into a
+ * higher APR to compensate whoever backs it.
  */
-function approxDistanceKmSquared(latDiff: bigint, lngDiff: bigint): bigint {
-  const kmPerDegLat = 111000000n;
-  const kmPerDegLng = 83000000n;
-  const distLat = (latDiff * kmPerDegLat) / 1000000000000n;
-  const distLng = (lngDiff * kmPerDegLng) / 1000000000000n;
-  return distLat * distLat + distLng * distLng;
+export async function refreshRegionRisk(): Promise<void> {
+  const regions = await getRegions();
+  if (regions.length === 0) {
+    console.log("[Risk] No regions registered on this deployment — skipping");
+    return;
+  }
+
+  const since = new Date(Date.now() - env.RISK_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+  // One WFS query covering all of NZ, then bucketed locally by region box —
+  // cheaper on GeoNet than one request per region.
+  const quakes = await fetchWFSQuakes({
+    startTime: since.toISOString(),
+    minMagnitude: RISK_MIN_MAGNITUDE,
+    maxResults: 2000,
+  });
+
+  console.log(
+    `[Risk] ${quakes.length} quakes M${RISK_MIN_MAGNITUDE}+ in the last ${env.RISK_WINDOW_DAYS} days`
+  );
+
+  const changedIds: number[] = [];
+  const changedScores: number[] = [];
+
+  for (const region of regions) {
+    const score = computeRiskScoreBps(quakes, region);
+    const count = countQuakesInRegion(quakes, region);
+    const delta = Math.abs(score - region.riskScoreBps);
+
+    console.log(
+      `[Risk] ${region.name}: ${count} quakes → score ${score} bps (was ${region.riskScoreBps})`
+    );
+
+    if (delta >= RISK_UPDATE_THRESHOLD_BPS) {
+      changedIds.push(region.id);
+      changedScores.push(score);
+    }
+  }
+
+  if (changedIds.length === 0) {
+    console.log("[Risk] No region moved enough to be worth an update");
+    return;
+  }
+
+  await submitRiskScores(changedIds, changedScores);
 }
 
 /**
- * Resolve EarthquakeMarket markets directly against QuakeShield's recorded
- * quake log on this chain — one source of truth, no second oracle submission
- * path. A market resolves YES as soon as a matching quake is found, or NO
- * once its resolutionTime has passed with nothing matching.
+ * Pay out any region whose fortnight is up. The contract decides what each
+ * region has earned (and skips the ones a quake interrupted) — this just
+ * triggers it on schedule.
  */
-export async function checkAndResolveMarkets(): Promise<void> {
-  const markets = await getUnresolvedMarkets();
-  if (markets.length === 0) return;
+export async function checkAndAccrue(): Promise<void> {
+  const regions = await getRegions();
+  if (regions.length === 0) return;
 
-  console.log(`[Resolver] Checking ${markets.length} unresolved market(s)...`);
-  const quakes = await getRecordedQuakes();
-  const nowSec = BigInt(Math.floor(Date.now() / 1000));
+  const period = await getAccrualPeriodSeconds();
+  const now = BigInt(Math.floor(Date.now() / 1000));
 
-  for (const market of markets) {
-    const radiusSq = market.radiusKm * market.radiusKm;
-    const qualifying = quakes.find(
-      (q) =>
-        q.magnitude >= market.triggerMagnitude &&
-        q.timestamp >= market.createdAt &&
-        q.timestamp <= market.resolutionTime &&
-        approxDistanceKmSquared(market.centerLat - q.latitude, market.centerLng - q.longitude) <= radiusSq
-    );
+  const due = regions.filter(
+    (region) => region.totalAssets > 0n && now >= region.lastAccrualAt + period
+  );
 
-    try {
-      if (qualifying) {
-        await submitMarketResolution(market.id, true);
-      } else if (nowSec >= market.resolutionTime) {
-        await submitMarketResolution(market.id, false);
-      }
-    } catch (error) {
-      console.error(`[Resolver] Failed to resolve market ${market.id}:`, error);
-    }
+  if (due.length === 0) {
+    console.log("[Accrual] Nothing due yet");
+    return;
   }
+
+  console.log(`[Accrual] ${due.length} region(s) due: ${due.map((r) => r.name).join(", ")}`);
+  await runAccrual();
 }
 
 /**
@@ -101,11 +148,33 @@ export async function checkAndResolveMarkets(): Promise<void> {
  */
 export function startPolling(): void {
   console.log(`[Poller] Starting every ${env.POLL_INTERVAL_MS / 1000}s`);
+  console.log(`[Risk] Refreshing region risk every ${env.RISK_REFRESH_MS / 1000 / 60 / 60}h`);
+  console.log(`[Accrual] Checking every ${env.ACCRUAL_CHECK_MS / 1000 / 60}min`);
 
   const tick = async () => {
     await pollAndRecord();
-    await checkAndResolveMarkets();
+
+    const now = Date.now();
+
+    if (now - lastRiskRefreshAt >= env.RISK_REFRESH_MS) {
+      lastRiskRefreshAt = now;
+      try {
+        await refreshRegionRisk();
+      } catch (error) {
+        console.error("[Risk] Failed to refresh region risk:", error);
+      }
+    }
+
+    if (now - lastAccrualCheckAt >= env.ACCRUAL_CHECK_MS) {
+      lastAccrualCheckAt = now;
+      try {
+        await checkAndAccrue();
+      } catch (error) {
+        console.error("[Accrual] Failed to run accrual:", error);
+      }
+    }
   };
+
   tick();
   setInterval(() => {
     tick();

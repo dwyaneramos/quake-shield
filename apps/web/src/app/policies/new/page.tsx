@@ -15,7 +15,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Header } from "@/components/layout/Header";
 import { isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
@@ -198,6 +197,8 @@ function BuyPolicyForm() {
     "onetime",
   );
   const [regionIndex, setRegionIndex] = useState(initialIndex);
+  const [customLat, setCustomLat] = useState("-41.2865");
+  const [customLng, setCustomLng] = useState("174.7762");
   const [coverage, setCoverage] = useState("1000");
   const [customLat, setCustomLat] = useState("-41.2865");
   const [customLng, setCustomLng] = useState("174.7762");
