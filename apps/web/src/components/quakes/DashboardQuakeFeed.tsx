@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { GEONET } from "@/lib/chains";
+import { Skeleton } from "@/components/ui/Skeleton";
 import type { GeoNetQuake } from "@/types";
 
 function relativeTime(iso: string): string {
@@ -25,6 +26,7 @@ function magnitudeBadge(m: number): string {
 export default function DashboardQuakeFeed({ threshold }: { threshold: number }) {
   const [quakes, setQuakes] = useState<GeoNetQuake[]>([]);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const poll = async () => {
@@ -34,7 +36,10 @@ export default function DashboardQuakeFeed({ threshold }: { threshold: number })
         const data = await res.json();
         setQuakes(data.quakes ?? []);
         setLastUpdated(new Date());
-      } catch {}
+      } catch {
+      } finally {
+        setLoading(false);
+      }
     };
 
     poll();
@@ -49,12 +54,22 @@ export default function DashboardQuakeFeed({ threshold }: { threshold: number })
       <div className="p-6 border-b border-ink-100">
         <h2 className="text-xl font-semibold text-ink-900">Live Earthquake Feed</h2>
         <p className="text-sm text-ink-500 mt-1">
-          {filtered.length} quakes shown · updated {relativeTime(lastUpdated.toISOString())}
+          {loading ? "Loading…" : `${filtered.length} quakes shown · updated ${relativeTime(lastUpdated.toISOString())}`}
         </p>
       </div>
 
       <div className="divide-y divide-ink-100 max-h-[400px] overflow-y-auto">
-        {filtered.length === 0 ? (
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="p-4 flex items-center gap-4">
+              <Skeleton className="w-12 h-12 rounded-lg shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3.5 w-1/4" />
+              </div>
+            </div>
+          ))
+        ) : filtered.length === 0 ? (
           <p className="p-8 text-center text-ink-500">
             No quakes at or above M{threshold.toFixed(1)}.
           </p>

@@ -9,6 +9,7 @@ import { useClaims } from "@/lib/hooks/useClaims";
 import { getContracts } from "@/lib/contracts";
 import { getExplorerUrl } from "@/lib/chains";
 import { SCALE } from "@/types";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 type Tab = "policies" | "claims";
 type Filter = "all" | "active" | "paid";
@@ -136,7 +137,18 @@ export default function PoliciesPage() {
                 {/* Policy List */}
                 <div className="bg-white rounded-xl shadow-sm border border-ink-100">
                   {isLoading ? (
-                    <p className="p-8 text-center text-ink-500">Loading policies…</p>
+                    <div className="divide-y divide-ink-100">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="p-5 flex items-start gap-4">
+                          <Skeleton className="w-14 h-14 rounded-lg shrink-0" />
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-4 w-1/3" />
+                            <Skeleton className="h-3.5 w-2/3" />
+                            <Skeleton className="h-3 w-1/4" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : filtered.length === 0 ? (
                     <div className="p-8 text-center text-ink-500">
                       {policies.length === 0 ? (
@@ -255,7 +267,17 @@ export default function PoliciesPage() {
                 </div>
 
                 {claimsLoading ? (
-                  <p className="p-8 text-center text-ink-500">Loading claims…</p>
+                  <div className="divide-y divide-ink-100">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="p-4 flex items-center gap-4">
+                        <Skeleton className="w-14 h-14 rounded-lg shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-1/2" />
+                          <Skeleton className="h-3.5 w-2/3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : claimsError ? (
                   <p className="p-8 text-center text-quake-700">{claimsError}</p>
                 ) : claims.length === 0 ? (

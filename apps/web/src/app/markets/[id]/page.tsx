@@ -12,6 +12,7 @@ import { useRedeem } from "@/lib/hooks/useRedeem";
 import { useUserShares } from "@/lib/hooks/useUserShares";
 import { previewBuy } from "@/lib/marketMath";
 import { SCALE } from "@/types";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 function timeUntil(resolutionTime: bigint): string {
   const diff = Number(resolutionTime) - Date.now() / 1000;
@@ -64,8 +65,37 @@ export default function MarketDetailPage() {
   if (isLoading || !market) {
     return (
       <div className="min-h-screen bg-white">
-        <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 text-center text-ink-500">
-          Loading market…
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <Skeleton className="h-8 w-2/3 mb-2" />
+          <Skeleton className="h-4 w-1/3 mb-8" />
+          <div className="grid lg:grid-cols-5 gap-8">
+            <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-ink-100 p-6">
+              <Skeleton className="h-3 w-full rounded-full mb-2" />
+              <div className="flex justify-between mb-6">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+              <div className="grid grid-cols-2 gap-3 bg-ink-50 rounded-lg p-4 border border-ink-100">
+                <div>
+                  <Skeleton className="h-3.5 w-24 mb-2" />
+                  <Skeleton className="h-5 w-12" />
+                </div>
+                <div>
+                  <Skeleton className="h-3.5 w-24 mb-2" />
+                  <Skeleton className="h-5 w-12" />
+                </div>
+              </div>
+            </div>
+            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-ink-100 p-6 h-fit space-y-3">
+              <Skeleton className="h-5 w-20" />
+              <div className="flex gap-2">
+                <Skeleton className="h-9 flex-1 rounded-lg" />
+                <Skeleton className="h-9 flex-1 rounded-lg" />
+              </div>
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <Skeleton className="h-12 w-full rounded-lg" />
+            </div>
+          </div>
         </main>
       </div>
     );
