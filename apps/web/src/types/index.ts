@@ -49,13 +49,38 @@ export interface PoolStats {
   balance: bigint;
   activePolicies: bigint;
   totalActiveCoverage: bigint;
-  totalShares: bigint;
+  totalInvested: bigint;
+  yieldReserve: bigint;
 }
 
-// Capital provider position
-export interface ProviderPosition {
+// An investable NZ region from the contract's region registry
+export interface Region {
+  id: number;
+  name: string;
+  south: bigint; // Scaled by 1e6
+  north: bigint;
+  west: bigint;
+  east: bigint;
+  totalAssets: bigint;
+  totalShares: bigint;
+  epoch: bigint;
+  riskScoreBps: bigint;
+  riskUpdatedAt: bigint;
+  lastAccrualAt: bigint;
+  lastQuakeAt: bigint;
+  quakeCount: bigint;
+  totalInterestPaid: bigint;
+  totalLosses: bigint;
+  active: boolean;
+  /** Derived from riskScoreBps by the contract — the return this region pays. */
+  aprBps: bigint;
+}
+
+// An investor's stake in one region
+export interface InvestmentPosition {
+  regionId: number;
   shares: bigint;
-  currentValue: bigint;
+  value: bigint;
 }
 
 // Earthquake event from contract
@@ -66,31 +91,6 @@ export interface QuakeEvent {
   depth: bigint;
   timestamp: bigint;
   publicId: string;
-}
-
-// Binary (YES/NO) earthquake prediction market from the EarthquakeMarket contract
-export interface EarthquakeMarket {
-  id: bigint;
-  description: string;
-  centerLat: bigint;
-  centerLng: bigint;
-  radiusKm: bigint;
-  triggerMagnitude: bigint;
-  createdAt: bigint;
-  resolutionTime: bigint;
-  yesReserve: bigint;
-  noReserve: bigint;
-  collateralBalance: bigint;
-  resolved: boolean;
-  outcomeYes: boolean;
-}
-
-// Market resolution result
-export interface MarketResolution {
-  resolved: boolean;
-  outcome: boolean;
-  qualifyingQuake?: GeoNetQuake;
-  checkedAt: string;
 }
 
 // Earthquake statistics from GeoNet
@@ -144,8 +144,8 @@ export const SCALE = {
   fromDNZD: (scaled: bigint): number => Number(scaled) / 1_000_000,
 
   /**
-   * Convert a CPMM odds/price value (scaled by 1e18, per getMarketPrice) to a
-   * human fraction. Example: 620000000000000000n -> 0.62
+   * Convert a basis-point rate to a human percentage.
+   * Example: 1700n -> 17
    */
-  fromOdds: (scaled: bigint): number => Number(scaled) / 1e18,
+  fromBps: (scaled: bigint): number => Number(scaled) / 100,
 };

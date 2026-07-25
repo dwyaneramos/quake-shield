@@ -3,6 +3,15 @@
 ## Project Overview
 Parametric earthquake insurance platform for New Zealand. Smart contracts (deployed identically to two chains) automatically pay out when GeoNet earthquake data meets policy triggers.
 
+Insurance is funded by regional investments, not a single undifferentiated
+pool: investors deposit DNZD behind a specific NZ region (Canterbury, Otago,
+Wellington, ...), effectively betting that region stays quiet. Every
+fortnight a region goes without a significant quake, its investors earn a
+return out of policyholder premiums, priced dynamically by how seismically
+active that region has been lately. If a significant quake does strike, the
+payouts it causes are charged against that region's invested capital first —
+investing is real principal at risk, not a guaranteed yield.
+
 ## Tech Stack
 - **Blockchain:** Multi-chain — Ethereum Sepolia (chainId: 11155111) and Avalanche Fuji C-Chain (chainId: 43113). Same contracts, deployed separately to each.
 - **Token:** Mock dNZD (6 decimals) per chain — see `packages/contracts/contracts/mocks/MockDNZD.sol`. A NewMoney dNZD integration (the real token) is planned on Sepolia (see below).
@@ -89,6 +98,9 @@ SNOWTRACE_API_KEY=...
 # Oracle settings
 POLL_INTERVAL_MS=30000
 MIN_MAGITUDE_TO_REPORT=500  # 5.0 magnitude
+RISK_REFRESH_MS=21600000    # How often region risk scores are recomputed and pushed (default 6h)
+RISK_WINDOW_DAYS=90         # Days of GeoNet history a region's risk score is computed from
+ACCRUAL_CHECK_MS=3600000    # How often the oracle checks whether a region's fortnight is due (default 1h)
 
 # Frontend
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=... # Get from cloud.walletconnect.com
@@ -102,12 +114,22 @@ plain var.
 ## Architecture Notes
 
 ### Data Flow
-1. **User buys policy** → Frontend calls `buyPolicy()` on QuakeShield.sol, on whichever chain the wallet is connected to
+
+**Insurance:**
+1. **User buys policy** → Frontend calls `buyPolicy()` on QuakeShield.sol, on whichever chain the wallet is connected to. The 1% premium is added to the pool's `yieldReserve`, the pot investor returns are paid from
 2. **Oracle polls GeoNet** → Every 30s, checks for new quakes ≥ 5.0 magnitude
 3. **Earthquake detected** → Oracle calls `recordEarthquake()` on the contract for its configured chain
-4. **Automatic payout** → Contract checks all active policies on that chain, transfers DNZD if trigger conditions met
+4. **Automatic payout** → Contract checks all active policies on that chain, transfers DNZD if trigger conditions met. Any region whose bounding box contains the epicenter has its earning period interrupted, and the payout is charged against that region's invested capital first (see below)
 
-Each chain has its own independent pool, policies, and oracle — a quake recorded on Sepolia does not affect the Fuji deployment.
+**Investing:**
+1. **Regions are seeded at deploy time** → `scripts/deploy.ts` registers the 16 NZ regions from `packages/shared/src/regions.json` on `QuakeShield` via `addRegion()`, each as a lat/lng bounding box
+2. **Investor deposits** → Frontend calls `invest(regionId, amount)`, minting the investor shares in that region proportional to its current assets
+3. **Oracle scores risk** → Every few hours, the oracle pulls each region's recent GeoNet quake history (see `apps/oracle/src/risk.ts`) and pushes an updated 0–10000 risk score via `setRegionRiskScores()`. The contract turns that into a bounded APR (`BASE_APR_BPS` at score 0 up to `MAX_APR_BPS` at score 10000) via `getRegionAprBps()` — the more active a region has been lately, the more it pays to back it
+4. **Fortnightly accrual** → The oracle (or anyone, permissionlessly) calls `accrueRegion()`/`accrueAllRegions()` on schedule. Each elapsed 14-day period pays that region's assets its current APR out of `yieldReserve`, *unless* a qualifying quake (≥ 5.0) landed in that period, in which case the period is skipped and no interest is paid
+5. **Loss on a claim** → When `recordEarthquake()` triggers a payout, the invested capital of every region containing the epicenter is charged first (pro rata if more than one), then the rest of the pool, then the yield reserve. A region emptied by losses has its shares zeroed and its epoch bumped, so a later investor starts clean instead of inheriting a wiped position
+6. **Investor withdraws** → `withdrawInvestment(regionId, amount)` (partial) or `withdrawAllFromRegion(regionId)`, subject to the same 150% pool-wide reserve ratio check policies are
+
+Each chain has its own independent pool, policies, regions, and oracle — a quake recorded on Sepolia does not affect the Fuji deployment.
 
 ### GeoNet API
 - Base URL: `https://api.geonet.org.nz`
@@ -158,6 +180,7 @@ QuakeShield plans to use NewMoney's dNZD (NZD-backed stablecoin, getnew.money) a
 4. **GeoNet rate limits:** Don't poll faster than 30s
 5. **DNZD decimals:** Always use 6 decimals (1 DNZD = 1000000)
 6. **Mixing up chains:** Sepolia and Fuji have entirely separate contract deployments, addresses, and pools — a policy bought on one chain does not exist on the other
+7. **Region IDs are positional:** A region's on-chain ID is just its index in `regions[]`, assigned in the order `addRegion()` was called during deploy — which is the order of `packages/shared/src/regions.json`. The frontend and oracle both assume region ID `i` on-chain corresponds to `NZ_REGIONS[i]` in that file; don't reorder or splice that array without redeploying, or region names, boxes, and IDs will drift apart across the two
 
 ## Testing
 
@@ -169,18 +192,20 @@ pnpm hardhat test --grep "buyPolicy"  # Run specific test
 ```
 
 ### Manual Testing Flow
-1. Deploy contracts to Sepolia and/or Fuji
+1. Deploy contracts to Sepolia and/or Fuji — this also registers the 16 NZ regions and seeds `yieldReserve` with 50,000 mock DNZD
 2. Mint test DNZD: `DNZD.mint(yourAddress, 100000000)` (100 DNZD)
 3. Start frontend, connect wallet, switch to the chain you deployed to
-4. Buy a policy
+4. Invest in a region at `/investments`, then buy a policy in the same region at `/policies/new`
 5. Start the matching oracle instance, wait for a real earthquake OR manually call `recordEarthquake()` via Hardhat console
+6. Fast-forward 14 days (`hardhat_mine`/`evm_increaseTime` on a local node) and call `accrueRegion()` (or wait for the oracle's scheduled call) to see the fortnightly return land
 
 ## Deployment Checklist
 - [ ] Fund deployer wallet with Sepolia ETH and/or Fuji AVAX
-- [ ] Deploy MockDNZD + QuakeShield to Sepolia (`pnpm deploy:sepolia`)
+- [ ] Deploy MockDNZD + QuakeShield to Sepolia (`pnpm deploy:sepolia`) — registers all 16 regions and seeds the yield reserve automatically
 - [ ] Deploy MockDNZD + QuakeShield to Fuji (`pnpm deploy:fuji`)
 - [ ] Verify contracts (Etherscan for Sepolia, Snowtrace for Fuji)
 - [ ] Update the root `.env` with per-chain addresses
 - [ ] Mint test DNZD to oracle wallet(s)
 - [ ] Set oracle address in QuakeShield contract if using a separate oracle wallet per chain
 - [ ] Fund oracle wallet(s) with native gas token
+- [ ] Confirm the oracle logs are pushing region risk scores and running accrual (see `[Risk]`/`[Accrual]` log lines)

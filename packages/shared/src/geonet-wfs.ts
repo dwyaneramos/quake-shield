@@ -283,12 +283,3 @@ export const NZ_BOUNDS: BoundingBox = {
   east: 179.0,
   west: 165.0,
 };
-
-export const NZ_REGIONS: Record<string, { lat: number; lng: number }> = {
-  "Wellington": { lat: -41.2858, lng: 174.778 },
-  "Auckland": { lat: -36.8485, lng: 174.7633 },
-  "Christchurch": { lat: -43.53, lng: 172.636 },
-  "Queenstown": { lat: -45.0312, lng: 168.6626 },
-  "Napier": { lat: -39.4928, lng: 176.912 },
-  "Dunedin": { lat: -45.8788, lng: 170.5028 },
-};

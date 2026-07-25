@@ -1,0 +1,18 @@
+[
+  { "id": "northland", "name": "Northland", "island": "North Island", "south": -36.4, "north": -34.3, "west": 172.6, "east": 174.6 },
+  { "id": "auckland", "name": "Auckland", "island": "North Island", "south": -37.3, "north": -36.4, "west": 174.2, "east": 175.4 },
+  { "id": "waikato", "name": "Waikato", "island": "North Island", "south": -39.0, "north": -37.3, "west": 174.3, "east": 176.0 },
+  { "id": "bay-of-plenty", "name": "Bay of Plenty", "island": "North Island", "south": -38.5, "north": -37.2, "west": 176.0, "east": 177.2 },
+  { "id": "gisborne", "name": "Gisborne", "island": "North Island", "south": -39.0, "north": -37.4, "west": 177.2, "east": 178.7 },
+  { "id": "hawkes-bay", "name": "Hawke's Bay", "island": "North Island", "south": -40.4, "north": -38.8, "west": 176.5, "east": 178.1 },
+  { "id": "taranaki", "name": "Taranaki", "island": "North Island", "south": -39.8, "north": -38.6, "west": 173.7, "east": 174.8 },
+  { "id": "manawatu-whanganui", "name": "Manawatū-Whanganui", "island": "North Island", "south": -40.7, "north": -38.8, "west": 174.8, "east": 176.5 },
+  { "id": "wellington", "name": "Wellington", "island": "North Island", "south": -41.7, "north": -40.7, "west": 174.6, "east": 176.3 },
+  { "id": "tasman", "name": "Tasman", "island": "South Island", "south": -41.9, "north": -40.7, "west": 172.0, "east": 173.2 },
+  { "id": "nelson", "name": "Nelson", "island": "South Island", "south": -41.5, "north": -41.2, "west": 173.2, "east": 173.5 },
+  { "id": "marlborough", "name": "Marlborough", "island": "South Island", "south": -42.4, "north": -41.0, "west": 173.5, "east": 174.5 },
+  { "id": "west-coast", "name": "West Coast", "island": "South Island", "south": -44.5, "north": -41.9, "west": 168.3, "east": 171.5 },
+  { "id": "canterbury", "name": "Canterbury", "island": "South Island", "south": -45.1, "north": -42.4, "west": 171.5, "east": 174.2 },
+  { "id": "otago", "name": "Otago", "island": "South Island", "south": -46.7, "north": -44.4, "west": 169.4, "east": 171.5 },
+  { "id": "southland", "name": "Southland", "island": "South Island", "south": -47.4, "north": -44.5, "west": 166.3, "east": 169.4 }
+]

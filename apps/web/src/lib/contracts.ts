@@ -58,8 +58,70 @@ export const QUAKESHIELD_ABI = [
     "inputs": [
       {
         "indexed": true,
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "periodEnd",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
+    ],
+    "name": "AccrualSkipped",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "aprBps",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "periodEnd",
+        "type": "uint256"
+      }
+    ],
+    "name": "InterestAccrued",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
         "internalType": "address",
-        "name": "provider",
+        "name": "investor",
         "type": "address"
       },
       {
@@ -75,7 +137,7 @@ export const QUAKESHIELD_ABI = [
         "type": "uint256"
       }
     ],
-    "name": "CapitalDeposited",
+    "name": "InvestmentDeposited",
     "type": "event"
   },
   {
@@ -83,9 +145,9 @@ export const QUAKESHIELD_ABI = [
     "inputs": [
       {
         "indexed": true,
-        "internalType": "address",
-        "name": "provider",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
       },
       {
         "indexed": false,
@@ -94,7 +156,38 @@ export const QUAKESHIELD_ABI = [
         "type": "uint256"
       }
     ],
-    "name": "CapitalWithdrawn",
+    "name": "InvestmentLoss",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "investor",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "sharesBurned",
+        "type": "uint256"
+      }
+    ],
+    "name": "InvestmentWithdrawn",
     "type": "event"
   },
   {
@@ -229,6 +322,210 @@ export const QUAKESHIELD_ABI = [
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      }
+    ],
+    "name": "RegionAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "magnitude",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
+      }
+    ],
+    "name": "RegionQuake",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "riskScoreBps",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "aprBps",
+        "type": "uint256"
+      }
+    ],
+    "name": "RegionRiskUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
+      }
+    ],
+    "name": "RegionStatusUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newEpoch",
+        "type": "uint256"
+      }
+    ],
+    "name": "RegionWipedOut",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "YieldReserveFunded",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "ACCRUAL_PERIOD",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "BASE_APR_BPS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "DNZD",
+    "outputs": [
+      {
+        "internalType": "contract IERC20",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "INVESTMENT_TRIGGER_MAGNITUDE",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_ACCRUAL_PERIODS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_APR_BPS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "MAX_COVERAGE_PER_POLICY",
     "outputs": [
@@ -252,6 +549,77 @@ export const QUAKESHIELD_ABI = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "accrueAllRegions",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "interestPaid",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "accrueRegion",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "interestPaid",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "int256",
+        "name": "south",
+        "type": "int256"
+      },
+      {
+        "internalType": "int256",
+        "name": "north",
+        "type": "int256"
+      },
+      {
+        "internalType": "int256",
+        "name": "west",
+        "type": "int256"
+      },
+      {
+        "internalType": "int256",
+        "name": "east",
+        "type": "int256"
+      }
+    ],
+    "name": "addRegion",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -301,9 +669,95 @@ export const QUAKESHIELD_ABI = [
         "type": "uint256"
       }
     ],
-    "name": "deposit",
+    "name": "fundYieldReserve",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "investor",
+        "type": "address"
+      }
+    ],
+    "name": "getInvestment",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "value",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "investor",
+        "type": "address"
+      }
+    ],
+    "name": "getInvestorRegions",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "investor",
+        "type": "address"
+      }
+    ],
+    "name": "getInvestorTotalValue",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "total",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getNextAccrualAt",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -413,31 +867,12 @@ export const QUAKESHIELD_ABI = [
       },
       {
         "internalType": "uint256",
-        "name": "_totalShares",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "provider",
-        "type": "address"
-      }
-    ],
-    "name": "getProviderInfo",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "shares",
+        "name": "_totalInvested",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "currentValue",
+        "name": "_yieldReserve",
         "type": "uint256"
       }
     ],
@@ -509,12 +944,177 @@ export const QUAKESHIELD_ABI = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getRegion",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "internalType": "int256",
+            "name": "south",
+            "type": "int256"
+          },
+          {
+            "internalType": "int256",
+            "name": "north",
+            "type": "int256"
+          },
+          {
+            "internalType": "int256",
+            "name": "west",
+            "type": "int256"
+          },
+          {
+            "internalType": "int256",
+            "name": "east",
+            "type": "int256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "totalAssets",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "totalShares",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "epoch",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "riskScoreBps",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "riskUpdatedAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lastAccrualAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lastQuakeAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "quakeCount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "totalInterestPaid",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "totalLosses",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "active",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct QuakeShield.Region",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getRegionAprBps",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getRegionCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getRegionPeriodInterest",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "getReserveRatio",
     "outputs": [
       {
         "internalType": "uint256",
         "name": "reserveRatioBps",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getTotalInvested",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "total",
         "type": "uint256"
       }
     ],
@@ -538,6 +1138,24 @@ export const QUAKESHIELD_ABI = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "invest",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -651,16 +1269,50 @@ export const QUAKESHIELD_ABI = [
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
         "internalType": "address",
         "name": "",
         "type": "address"
       }
     ],
-    "name": "providerShares",
+    "name": "positions",
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "epoch",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "previewAccrual",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "periodsDue",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "interest",
         "type": "uint256"
       }
     ],
@@ -751,6 +1403,100 @@ export const QUAKESHIELD_ABI = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "regions",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "int256",
+        "name": "south",
+        "type": "int256"
+      },
+      {
+        "internalType": "int256",
+        "name": "north",
+        "type": "int256"
+      },
+      {
+        "internalType": "int256",
+        "name": "west",
+        "type": "int256"
+      },
+      {
+        "internalType": "int256",
+        "name": "east",
+        "type": "int256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalAssets",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalShares",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "epoch",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "riskScoreBps",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "riskUpdatedAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lastAccrualAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lastQuakeAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "quakeCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalInterestPaid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalLosses",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "renounceOwnership",
     "outputs": [],
@@ -766,6 +1512,60 @@ export const QUAKESHIELD_ABI = [
       }
     ],
     "name": "setOracle",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
+      }
+    ],
+    "name": "setRegionActive",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "riskScoreBps",
+        "type": "uint256"
+      }
+    ],
+    "name": "setRegionRiskScore",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "regionIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "riskScoresBps",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "setRegionRiskScores",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -810,19 +1610,6 @@ export const QUAKESHIELD_ABI = [
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "totalShares",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -837,12 +1624,12 @@ export const QUAKESHIELD_ABI = [
   },
   {
     "inputs": [],
-    "name": "DNZD",
+    "name": "uncoveredLosses",
     "outputs": [
       {
-        "internalType": "contract IERC20",
+        "internalType": "uint256",
         "name": "",
-        "type": "address"
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -873,10 +1660,47 @@ export const QUAKESHIELD_ABI = [
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "withdraw",
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdrawAllFromRegion",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "regionId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdrawInvestment",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "yieldReserve",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -885,7 +1709,7 @@ export const QUAKESHIELD_ABI = [
   }
 ] as const;
 
-export const MOCK_USDC_ABI = [
+export const DNZD_ABI = [
   {
     "inputs": [],
     "stateMutability": "nonpayable",
@@ -1219,230 +2043,39 @@ export const MOCK_USDC_ABI = [
   }
 ] as const;
 
-export const EARTHQUAKE_MARKET_ABI = [
-  {
-    "inputs": [
-      { "internalType": "address", "name": "_token", "type": "address" },
-      { "internalType": "address", "name": "_quakeShield", "type": "address" }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  { "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }], "name": "OwnableInvalidOwner", "type": "error" },
-  { "inputs": [{ "internalType": "address", "name": "account", "type": "address" }], "name": "OwnableUnauthorizedAccount", "type": "error" },
-  { "inputs": [], "name": "ReentrancyGuardReentrantCall", "type": "error" },
-  { "inputs": [{ "internalType": "address", "name": "token", "type": "address" }], "name": "SafeERC20FailedOperation", "type": "error" },
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "uint256", "name": "marketId", "type": "uint256" },
-      { "indexed": false, "internalType": "string", "name": "description", "type": "string" },
-      { "indexed": false, "internalType": "int256", "name": "centerLat", "type": "int256" },
-      { "indexed": false, "internalType": "int256", "name": "centerLng", "type": "int256" },
-      { "indexed": false, "internalType": "uint256", "name": "radiusKm", "type": "uint256" },
-      { "indexed": false, "internalType": "uint256", "name": "triggerMagnitude", "type": "uint256" },
-      { "indexed": false, "internalType": "uint256", "name": "resolutionTime", "type": "uint256" }
-    ],
-    "name": "MarketCreated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "uint256", "name": "marketId", "type": "uint256" },
-      { "indexed": false, "internalType": "bool", "name": "outcomeYes", "type": "bool" }
-    ],
-    "name": "MarketResolved",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "address", "name": "oldOracle", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "newOracle", "type": "address" }
-    ],
-    "name": "OracleUpdated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "address", "name": "previousOwner", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "newOwner", "type": "address" }
-    ],
-    "name": "OwnershipTransferred",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "uint256", "name": "marketId", "type": "uint256" },
-      { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
-      { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
-    "name": "Redeemed",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "uint256", "name": "marketId", "type": "uint256" },
-      { "indexed": true, "internalType": "address", "name": "buyer", "type": "address" },
-      { "indexed": false, "internalType": "bool", "name": "isYes", "type": "bool" },
-      { "indexed": false, "internalType": "uint256", "name": "amountIn", "type": "uint256" },
-      { "indexed": false, "internalType": "uint256", "name": "sharesOut", "type": "uint256" }
-    ],
-    "name": "SharesPurchased",
-    "type": "event"
-  },
-  { "inputs": [], "name": "SEED_LIQUIDITY", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "marketId", "type": "uint256" },
-      { "internalType": "uint256", "name": "amountIn", "type": "uint256" }
-    ],
-    "name": "buyNo",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "marketId", "type": "uint256" },
-      { "internalType": "uint256", "name": "amountIn", "type": "uint256" }
-    ],
-    "name": "buyYes",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "string", "name": "description", "type": "string" },
-      { "internalType": "int256", "name": "centerLat", "type": "int256" },
-      { "internalType": "int256", "name": "centerLng", "type": "int256" },
-      { "internalType": "uint256", "name": "radiusKm", "type": "uint256" },
-      { "internalType": "uint256", "name": "triggerMagnitude", "type": "uint256" },
-      { "internalType": "uint256", "name": "resolutionTime", "type": "uint256" }
-    ],
-    "name": "createMarket",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "uint256", "name": "marketId", "type": "uint256" }],
-    "name": "getMarket",
-    "outputs": [
-      {
-        "components": [
-          { "internalType": "string", "name": "description", "type": "string" },
-          { "internalType": "int256", "name": "centerLat", "type": "int256" },
-          { "internalType": "int256", "name": "centerLng", "type": "int256" },
-          { "internalType": "uint256", "name": "radiusKm", "type": "uint256" },
-          { "internalType": "uint256", "name": "triggerMagnitude", "type": "uint256" },
-          { "internalType": "uint256", "name": "createdAt", "type": "uint256" },
-          { "internalType": "uint256", "name": "resolutionTime", "type": "uint256" },
-          { "internalType": "uint256", "name": "yesReserve", "type": "uint256" },
-          { "internalType": "uint256", "name": "noReserve", "type": "uint256" },
-          { "internalType": "uint256", "name": "collateralBalance", "type": "uint256" },
-          { "internalType": "bool", "name": "resolved", "type": "bool" },
-          { "internalType": "bool", "name": "outcomeYes", "type": "bool" }
-        ],
-        "internalType": "struct EarthquakeMarket.Market",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  { "inputs": [], "name": "getMarketCount", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
-  {
-    "inputs": [{ "internalType": "uint256", "name": "marketId", "type": "uint256" }],
-    "name": "getMarketPrice",
-    "outputs": [
-      { "internalType": "uint256", "name": "yesPrice", "type": "uint256" },
-      { "internalType": "uint256", "name": "noPrice", "type": "uint256" }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  { "inputs": [], "name": "nextMarketId", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "", "type": "uint256" },
-      { "internalType": "address", "name": "", "type": "address" }
-    ],
-    "name": "noSharesOf",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  { "inputs": [], "name": "oracle", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" },
-  { "inputs": [], "name": "owner", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" },
-  { "inputs": [], "name": "quakeShield", "outputs": [{ "internalType": "contract IQuakeShieldReader", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" },
-  { "inputs": [{ "internalType": "uint256", "name": "marketId", "type": "uint256" }], "name": "redeem", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-  { "inputs": [], "name": "renounceOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "marketId", "type": "uint256" },
-      { "internalType": "bool", "name": "outcomeYes", "type": "bool" }
-    ],
-    "name": "resolveMarket",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  { "inputs": [{ "internalType": "address", "name": "_oracle", "type": "address" }], "name": "setOracle", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-  { "inputs": [], "name": "token", "outputs": [{ "internalType": "contract IERC20", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" },
-  { "inputs": [{ "internalType": "address", "name": "newOwner", "type": "address" }], "name": "transferOwnership", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "", "type": "uint256" },
-      { "internalType": "address", "name": "", "type": "address" }
-    ],
-    "name": "yesSharesOf",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  }
-] as const;
-
 // Contract addresses are per-chain — QuakeShield is deployed separately to
-// Sepolia and Fuji, so there's a distinct MockUSDC/QuakeShield pair on each.
+// Sepolia and Fuji, so there's a distinct DNZD/QuakeShield pair on each.
 // Set after deployment in the root .env.
 export interface ChainContracts {
   QUAKESHIELD_ADDRESS: `0x${string}` | "";
-  USDC_ADDRESS: `0x${string}` | "";
+  DNZD_ADDRESS: `0x${string}` | "";
   DEPLOY_BLOCK: bigint;
-  EARTHQUAKE_MARKET_ADDRESS: `0x${string}` | "";
-  EARTHQUAKE_MARKET_DEPLOY_BLOCK: bigint;
 }
 
+// `NEXT_PUBLIC_USDC_ADDRESS_*` is the older name for the same token address and
+// is still read as a fallback so existing .env files keep working. Each name
+// has to appear as a literal for Next.js to inline it into the client bundle.
 export const CONTRACTS_BY_CHAIN: Record<number, ChainContracts> = {
   [sepolia.id]: {
     QUAKESHIELD_ADDRESS: (process.env.NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
-    USDC_ADDRESS: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
+    DNZD_ADDRESS: (process.env.NEXT_PUBLIC_DNZD_ADDRESS_SEPOLIA ||
+      process.env.NEXT_PUBLIC_USDC_ADDRESS_SEPOLIA ||
+      "") as `0x${string}` | "",
     DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_QUAKE_SHIELD_DEPLOY_BLOCK_SEPOLIA || "0"),
-    EARTHQUAKE_MARKET_ADDRESS: (process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
-    EARTHQUAKE_MARKET_DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_DEPLOY_BLOCK_SEPOLIA || "0"),
   },
   [avalancheFuji.id]: {
     QUAKESHIELD_ADDRESS: (process.env.NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_FUJI || "") as `0x${string}` | "",
-    USDC_ADDRESS: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_FUJI || "") as `0x${string}` | "",
+    DNZD_ADDRESS: (process.env.NEXT_PUBLIC_DNZD_ADDRESS_FUJI ||
+      process.env.NEXT_PUBLIC_USDC_ADDRESS_FUJI ||
+      "") as `0x${string}` | "",
     DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_QUAKE_SHIELD_DEPLOY_BLOCK_FUJI || "0"),
-    EARTHQUAKE_MARKET_ADDRESS: (process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_ADDRESS_FUJI || "") as `0x${string}` | "",
-    EARTHQUAKE_MARKET_DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_EARTHQUAKE_MARKET_DEPLOY_BLOCK_FUJI || "0"),
   },
 };
 
 const EMPTY_CONTRACTS: ChainContracts = {
   QUAKESHIELD_ADDRESS: "",
-  USDC_ADDRESS: "",
+  DNZD_ADDRESS: "",
   DEPLOY_BLOCK: 0n,
-  EARTHQUAKE_MARKET_ADDRESS: "",
-  EARTHQUAKE_MARKET_DEPLOY_BLOCK: 0n,
 };
 
 export function getContracts(chainId: number | undefined): ChainContracts {
@@ -1451,5 +2084,5 @@ export function getContracts(chainId: number | undefined): ChainContracts {
 
 export function isChainConfigured(chainId: number | undefined): boolean {
   const contracts = getContracts(chainId);
-  return Boolean(contracts.QUAKESHIELD_ADDRESS && contracts.USDC_ADDRESS);
+  return Boolean(contracts.QUAKESHIELD_ADDRESS && contracts.DNZD_ADDRESS);
 }
