@@ -29,21 +29,16 @@ export default function CityWidgets({
   useEffect(() => {
     let cancelled = false;
     async function loadAll() {
-      setLoading(true);
-      const results = await Promise.allSettled(
-        NZ_CITIES.map(async (city) => {
-          const res = await fetch(`/api/geonet/city?city=${city.id}`);
-          if (!res.ok) throw new Error();
-          return res.json() as Promise<WidgetData>;
-        })
-      );
+      const res = await fetch("/api/geonet/cities");
+      if (!res.ok) throw new Error();
+      const { cities } = await res.json();
       if (!cancelled) {
-        setWidgets(results.filter((r) => r.status === "fulfilled").map((r) => r.value));
+        setWidgets(cities);
         setLoading(false);
       }
     }
     loadAll();
-    const interval = setInterval(loadAll, 60000);
+    const interval = setInterval(loadAll, 120_000);
     return () => { cancelled = true; clearInterval(interval); };
   }, []);
 

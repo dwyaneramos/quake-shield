@@ -72,7 +72,7 @@ export default function EarthquakeProbabilityGraph({
 
   useEffect(() => {
     fetchData(selectedCity);
-    const interval = setInterval(() => fetchData(selectedCity), 30000);
+    const interval = setInterval(() => fetchData(selectedCity), 60_000);
     return () => clearInterval(interval);
   }, [selectedCity, fetchData]);
 
@@ -222,7 +222,7 @@ export default function EarthquakeProbabilityGraph({
               <span className="text-ink-500">High</span>
             </div>
           </div>
-          <p className="text-ink-400">Data from GeoNet &middot; Updated every 30s</p>
+          <p className="text-ink-400">Data from GeoNet &middot; Updated every 60s</p>
         </div>
       </div>
     </div>

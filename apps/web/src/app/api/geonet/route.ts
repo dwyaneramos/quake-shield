@@ -6,7 +6,6 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const mmi = Number(searchParams.get("mmi") ?? GEONET.MMI_THRESHOLD);
 
-  // WFS mode: bbox + time + magnitude filtering
   const bboxParam = searchParams.get("bbox");
   const startTime = searchParams.get("startTime");
   const endTime = searchParams.get("endTime");
@@ -16,8 +15,9 @@ export async function GET(request: Request) {
   const centerLng = searchParams.get("centerLng");
   const radiusKm = searchParams.get("radiusKm");
 
+  const headers = { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" };
+
   try {
-    // If bbox or center+radius params are present, use WFS
     if (bboxParam || (centerLat && centerLng && radiusKm)) {
       let bbox;
 
@@ -44,16 +44,15 @@ export async function GET(request: Request) {
         maxResults: 1000,
       });
 
-      return NextResponse.json({ quakes });
+      return NextResponse.json({ quakes }, { headers });
     }
 
-    // Default: legacy REST mode (MMI threshold)
     const quakes = await fetchRecentQuakes(Number.isFinite(mmi) ? mmi : GEONET.MMI_THRESHOLD);
-    return NextResponse.json({ quakes });
+    return NextResponse.json({ quakes }, { headers });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to fetch GeoNet data" },
-      { status: 502 }
+      { status: 502, headers }
     );
   }
 }

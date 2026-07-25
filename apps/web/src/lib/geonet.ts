@@ -4,6 +4,19 @@ import type { GeoNetQuake } from "@/types";
 const GEONET_WFS_BASE_URL = "https://wfs.geonet.org.nz/geonet/ows";
 const GEONET_REST_BASE_URL = "https://api.geonet.org.nz";
 
+const quakeCache = new Map<string, { data: GeoNetQuake[]; ts: number }>();
+const CACHE_TTL_MS = 60_000;
+
+function getCached<T>(key: string): T | null {
+  const entry = quakeCache.get(key);
+  if (entry && Date.now() - entry.ts < CACHE_TTL_MS) return entry.data as T;
+  return null;
+}
+
+function setCache(key: string, data: GeoNetQuake[]): void {
+  quakeCache.set(key, { data, ts: Date.now() });
+}
+
 export interface BoundingBox {
   west: number;
   south: number;
@@ -100,6 +113,10 @@ export function haversineDistanceKm(
 export async function fetchRecentQuakesREST(
   mmi: number = -1,
 ): Promise<GeoNetQuake[]> {
+  const cacheKey = `rest:${mmi}`;
+  const cached = getCached<GeoNetQuake[]>(cacheKey);
+  if (cached) return cached;
+
   const response = await fetch(`${GEONET_REST_BASE_URL}/quake?MMI=${mmi}`, {
     headers: {
       Accept: "application/vnd.geo+json;version=2",
@@ -112,7 +129,7 @@ export async function fetchRecentQuakesREST(
 
   const data = await response.json();
 
-  return (data.features || []).map((feature: any) => ({
+  const quakes = (data.features || []).map((feature: any) => ({
     publicID: feature.properties.publicID,
     time: feature.properties.time,
     depth: feature.properties.depth,
@@ -123,6 +140,9 @@ export async function fetchRecentQuakesREST(
     latitude: feature.geometry?.coordinates?.[1],
     longitude: feature.geometry?.coordinates?.[0],
   }));
+
+  setCache(cacheKey, quakes);
+  return quakes;
 }
 
 export async function fetchQuakeByIdWFS(publicID: string): Promise<GeoNetQuake> {

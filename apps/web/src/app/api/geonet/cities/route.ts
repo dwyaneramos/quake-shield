@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { fetchRecentQuakes } from "@/lib/geonet";
-import { NZ_CITIES, CITY_RADIUS_KM, getCityById, type NZCity } from "@/lib/cities";
+import { NZ_CITIES, CITY_RADIUS_KM, type NZCity } from "@/lib/cities";
 
 interface TrendPoint {
   time: string;
   probability: number;
   quakeCount: number;
   maxMagnitude: number;
+}
+
+interface CityWidgetResult {
+  city: NZCity;
+  currentProbability: number;
+  recentQuakeCount: number;
+  trend: TrendPoint[];
 }
 
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -26,11 +33,7 @@ function calculateProbability(quakeCount: number, maxMag: number, avgDepth: numb
   return freqScore + magScore + depthBonus;
 }
 
-function buildTrendData(
-  quakes: any[],
-  city: NZCity,
-  bucketCount = 12
-): TrendPoint[] {
+function buildTrendData(quakes: any[], city: NZCity, bucketCount = 12): TrendPoint[] {
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const bucketSize = (dayMs * 30) / bucketCount;
@@ -50,7 +53,6 @@ function buildTrendData(
   for (let i = 0; i < bucketCount; i++) {
     const bucketStart = now - (bucketCount - i) * bucketSize;
     const bucketEnd = bucketStart + bucketSize;
-
     const bucketQuakes = sorted.filter((q) => {
       const t = new Date(q.time).getTime();
       return t >= bucketStart && t < bucketEnd;
@@ -76,39 +78,27 @@ function buildTrendData(
   return points;
 }
 
-function buildCityResponse(quakes: any[], city: NZCity) {
-  const trend = buildTrendData(quakes, city);
-
-  const nearby = quakes.filter((q: any) => {
-    if (q.latitude == null || q.longitude == null) return false;
-    return haversineDistance(city.lat, city.lng, q.latitude, q.longitude) <= CITY_RADIUS_KM;
-  });
-
-  const currentProbability = trend.length > 0 ? trend[trend.length - 1].probability : 2;
-
-  return {
-    city,
-    currentProbability,
-    recentQuakeCount: nearby.length,
-    trend,
-  };
-}
-
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const cityId = searchParams.get("city") ?? "wellington";
-
-  const city = getCityById(cityId);
-  if (!city) {
-    return NextResponse.json({ error: `Unknown city: ${cityId}` }, { status: 400 });
-  }
-
-  const headers = { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" };
+export async function GET() {
+  const headers = { "Cache-Control": "public, s-maxage=45, stale-while-revalidate=60" };
 
   try {
     const quakes = await fetchRecentQuakes(1);
-    const result = buildCityResponse(quakes, city);
-    return NextResponse.json(result, { headers });
+
+    const cities: CityWidgetResult[] = NZ_CITIES.map((city) => {
+      const trend = buildTrendData(quakes, city);
+      const nearby = quakes.filter((q: any) => {
+        if (q.latitude == null || q.longitude == null) return false;
+        return haversineDistance(city.lat, city.lng, q.latitude, q.longitude) <= CITY_RADIUS_KM;
+      });
+      return {
+        city,
+        currentProbability: trend.length > 0 ? trend[trend.length - 1].probability : 2,
+        recentQuakeCount: nearby.length,
+        trend,
+      };
+    });
+
+    return NextResponse.json({ cities }, { headers });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to fetch data" },
