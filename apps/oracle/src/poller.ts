@@ -1,35 +1,14 @@
 import { fetchRecentQuakes, magnitudeToScaled, latLngToScaled } from "./geonet.js";
-import { recordEarthquake, isQuakeRecorded, getMarketCount, getMarket, resolveMarketOnChain } from "./signer.js";
+import {
+  recordEarthquake,
+  isQuakeRecorded,
+  getRecordedQuakes,
+  getUnresolvedMarkets,
+  submitMarketResolution,
+} from "./signer.js";
 import { env } from "./config.js";
 
 const submittedQuakes = new Set<string>();
-const resolvedMarkets = new Set<number>();
-
-function haversineDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function quakeMatchesMarket(
-  quakeLat: number,
-  quakeLng: number,
-  quakeMagnitude: number,
-  marketCenterLat: bigint,
-  marketCenterLng: bigint,
-  marketRadiusKm: bigint,
-  marketTriggerMagnitude: bigint
-): boolean {
-  const quakeMagScaled = magnitudeToScaled(quakeMagnitude);
-  if (quakeMagScaled < marketTriggerMagnitude) return false;
-  const centerLat = Number(marketCenterLat) / 1_000_000;
-  const centerLng = Number(marketCenterLng) / 1_000_000;
-  return haversineDistanceKm(quakeLat, quakeLng, centerLat, centerLng) <= Number(marketRadiusKm);
-}
 
 async function pollAndRecord(): Promise<void> {
   try {
@@ -68,64 +47,67 @@ async function pollAndRecord(): Promise<void> {
   }
 }
 
-async function resolveMarkets(): Promise<void> {
-  try {
-    const marketCount = await getMarketCount();
-    if (marketCount === 0) return;
+/**
+ * Mirrors EarthquakeMarket.sol's simplified (non-Haversine) MVP distance
+ * check exactly, in BigInt, so this pre-check agrees with what the on-chain
+ * resolveMarket() call will itself verify.
+ */
+function approxDistanceKmSquared(latDiff: bigint, lngDiff: bigint): bigint {
+  const kmPerDegLat = 111000000n;
+  const kmPerDegLng = 83000000n;
+  const distLat = (latDiff * kmPerDegLat) / 1000000000000n;
+  const distLng = (lngDiff * kmPerDegLng) / 1000000000000n;
+  return distLat * distLat + distLng * distLng;
+}
 
-    console.log(`[Resolver] Checking ${marketCount} market(s)...`);
-    const now = Math.floor(Date.now() / 1000);
-    const quakes = await fetchRecentQuakes(-1);
+/**
+ * Resolve EarthquakeMarket markets directly against QuakeShield's recorded
+ * quake log on this chain — one source of truth, no second oracle submission
+ * path. A market resolves YES as soon as a matching quake is found, or NO
+ * once its resolutionTime has passed with nothing matching.
+ */
+export async function checkAndResolveMarkets(): Promise<void> {
+  const markets = await getUnresolvedMarkets();
+  if (markets.length === 0) return;
 
-    for (let i = 0; i < marketCount; i++) {
-      if (resolvedMarkets.has(i)) continue;
-      const market = await getMarket(i);
-      if (!market || market.resolved) continue;
+  console.log(`[Resolver] Checking ${markets.length} unresolved market(s)...`);
+  const quakes = await getRecordedQuakes();
+  const nowSec = BigInt(Math.floor(Date.now() / 1000));
 
-      let matchingQuakeFound = false;
-      for (const quake of quakes) {
-        if (quake.latitude === undefined || quake.longitude === undefined) continue;
-        if (quakeMatchesMarket(
-          quake.latitude, quake.longitude, quake.magnitude,
-          market.centerLat, market.centerLng, market.radiusKm, market.triggerMagnitude
-        )) {
-          matchingQuakeFound = true;
-          break;
-        }
+  for (const market of markets) {
+    const radiusSq = market.radiusKm * market.radiusKm;
+    const qualifying = quakes.find(
+      (q) =>
+        q.magnitude >= market.triggerMagnitude &&
+        q.timestamp >= market.createdAt &&
+        q.timestamp <= market.resolutionTime &&
+        approxDistanceKmSquared(market.centerLat - q.latitude, market.centerLng - q.longitude) <= radiusSq
+    );
+
+    try {
+      if (qualifying) {
+        await submitMarketResolution(market.id, true);
+      } else if (nowSec >= market.resolutionTime) {
+        await submitMarketResolution(market.id, false);
       }
-
-      if (matchingQuakeFound) {
-        console.log(`[Resolver] Market ${i}: matching quake found -> YES`);
-        try {
-          await resolveMarketOnChain(i, true);
-          resolvedMarkets.add(i);
-        } catch (error) {
-          console.error(`[Resolver] Failed to resolve market ${i}:`, error);
-        }
-        continue;
-      }
-
-      if (now >= Number(market.resolutionTime)) {
-        console.log(`[Resolver] Market ${i}: expired, no match -> NO`);
-        try {
-          await resolveMarketOnChain(i, false);
-          resolvedMarkets.add(i);
-        } catch (error) {
-          console.error(`[Resolver] Failed to resolve market ${i}:`, error);
-        }
-      }
+    } catch (error) {
+      console.error(`[Resolver] Failed to resolve market ${market.id}:`, error);
     }
-  } catch (error) {
-    console.error("[Resolver] Error checking markets:", error);
   }
 }
 
+/**
+ * Start the polling loop
+ */
 export function startPolling(): void {
   console.log(`[Poller] Starting every ${env.POLL_INTERVAL_MS / 1000}s`);
-  pollAndRecord();
-  resolveMarkets();
+
+  const tick = async () => {
+    await pollAndRecord();
+    await checkAndResolveMarkets();
+  };
+  tick();
   setInterval(() => {
-    pollAndRecord();
-    resolveMarkets();
+    tick();
   }, env.POLL_INTERVAL_MS);
 }

@@ -36,6 +36,15 @@ async function main() {
   const quakeshieldAddress = await quakeshield.getAddress();
   console.log("QuakeShield deployed to:", quakeshieldAddress);
 
+  // Deploy EarthquakeMarket, sharing the same token and reading QuakeShield's
+  // recorded quake log for resolution.
+  console.log("\n--- Deploying EarthquakeMarket ---");
+  const EarthquakeMarket = await ethers.getContractFactory("EarthquakeMarket");
+  const earthquakeMarket = await EarthquakeMarket.deploy(usdcAddress, quakeshieldAddress);
+  await earthquakeMarket.waitForDeployment();
+  const earthquakeMarketAddress = await earthquakeMarket.getAddress();
+  console.log("EarthquakeMarket deployed to:", earthquakeMarketAddress);
+
   // Summary
   console.log("\n====================================");
   console.log("  DEPLOYMENT SUMMARY");
@@ -43,6 +52,7 @@ async function main() {
   console.log(`Network: ${network.name} (${network.config.chainId})`);
   console.log("Token:", usdcAddress, externalTokenAddress ? "(external)" : "(MockUSDC)");
   console.log("QuakeShield:", quakeshieldAddress);
+  console.log("EarthquakeMarket:", earthquakeMarketAddress);
   console.log("====================================");
   console.log("\nNext steps:");
   console.log(`1. Update the root .env with these addresses (the *_${network.name.toUpperCase()} vars)`);

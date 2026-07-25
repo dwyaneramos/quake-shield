@@ -3,7 +3,11 @@ import { avalancheFuji, sepolia } from "viem/chains";
 export const SUPPORTED_CHAINS = [sepolia, avalancheFuji] as const;
 
 export const RPC_URLS: Record<number, string> = {
-  [sepolia.id]: process.env.NEXT_PUBLIC_SEPOLIA_RPC || sepolia.rpcUrls.default.http[0],
+  // The default PublicNode endpoint rejects any eth_getLogs query reaching
+  // back past its free-tier retention window ("Archive requests require a
+  // personal token"), which breaks claims history lookups from deploy block.
+  // drpc.org's public gateway serves full historical logs with no token.
+  [sepolia.id]: process.env.NEXT_PUBLIC_SEPOLIA_RPC || "https://sepolia.drpc.org",
   [avalancheFuji.id]: process.env.NEXT_PUBLIC_FUJI_RPC || avalancheFuji.rpcUrls.default.http[0],
 };
 

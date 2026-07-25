@@ -8,24 +8,27 @@ const QUAKESHIELD_ABI = [
   "event QuakeRecorded(uint256 indexed quakeId, uint256 magnitude, int256 lat, int256 lng)",
 ];
 
+// EarthquakeMarket ABI (only the functions the resolver needs)
 const EARTHQUAKE_MARKET_ABI = [
-  "function resolveMarket(uint256 marketId, bool outcomeYes)",
-  "function getMarket(uint256 marketId) view returns (string description, int256 centerLat, int256 centerLng, uint256 radiusKm, uint256 triggerMagnitude, uint256 resolutionTime, uint256 yesReserve, uint256 noReserve, uint256 usdcCollateral, bool resolved, bool outcomeYes)",
   "function getMarketCount() view returns (uint256)",
-  "event MarketResolved(uint256 indexed marketId, bool outcomeYes)",
+  "function getMarket(uint256) view returns (tuple(string description, int256 centerLat, int256 centerLng, uint256 radiusKm, uint256 triggerMagnitude, uint256 createdAt, uint256 resolutionTime, uint256 yesReserve, uint256 noReserve, uint256 collateralBalance, bool resolved, bool outcomeYes))",
+  "function resolveMarket(uint256 marketId, bool outcomeYes)",
 ];
 
 let provider: ethers.JsonRpcProvider;
 let wallet: ethers.Wallet;
 let quakeShieldContract: ethers.Contract;
-let marketContract: ethers.Contract | null;
+let marketContract: ethers.Contract | null = null;
 
+/**
+ * Initialize blockchain connection
+ */
 export function initBlockchain(): void {
-  provider = new ethers.JsonRpcProvider(env.POLYGON_AMOY_RPC);
+  provider = new ethers.JsonRpcProvider(env.RPC_URL);
   wallet = new ethers.Wallet(env.PRIVATE_KEY, provider);
   quakeShieldContract = new ethers.Contract(env.QUAKE_SHIELD_ADDRESS, QUAKESHIELD_ABI, wallet);
 
-  console.log("[Blockchain] Connected to Polygon Amoy");
+  console.log(`[Blockchain] Connected to ${env.NETWORK_NAME}`);
   console.log("[Blockchain] Oracle address:", wallet.address);
   console.log("[Blockchain] QuakeShield:", env.QUAKE_SHIELD_ADDRESS);
 
@@ -33,8 +36,7 @@ export function initBlockchain(): void {
     marketContract = new ethers.Contract(env.EARTHQUAKE_MARKET_ADDRESS, EARTHQUAKE_MARKET_ABI, wallet);
     console.log("[Blockchain] EarthquakeMarket:", env.EARTHQUAKE_MARKET_ADDRESS);
   } else {
-    marketContract = null;
-    console.log("[Blockchain] EarthquakeMarket: not configured (set EARTHQUAKE_MARKET_ADDRESS)");
+    console.log("[Blockchain] EarthquakeMarket not configured for this network — skipping market resolution");
   }
 }
 
@@ -80,66 +82,75 @@ export async function isQuakeRecorded(publicId: string): Promise<boolean> {
   return false;
 }
 
-export interface MarketInfo {
-  description: string;
+export interface RecordedQuake {
+  magnitude: bigint;
+  latitude: bigint;
+  longitude: bigint;
+  timestamp: bigint;
+}
+
+/**
+ * Fetch all quakes QuakeShield has recorded on this chain — the single
+ * source of truth EarthquakeMarket resolution is checked against.
+ */
+export async function getRecordedQuakes(): Promise<RecordedQuake[]> {
+  const count = await getQuakeCount();
+  const quakes: RecordedQuake[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const q = await quakeShieldContract.recordedQuakes(i);
+    quakes.push({ magnitude: q.magnitude, latitude: q.latitude, longitude: q.longitude, timestamp: q.timestamp });
+  }
+
+  return quakes;
+}
+
+export interface OnChainMarket {
+  id: number;
   centerLat: bigint;
   centerLng: bigint;
   radiusKm: bigint;
   triggerMagnitude: bigint;
+  createdAt: bigint;
   resolutionTime: bigint;
-  yesReserve: bigint;
-  noReserve: bigint;
-  usdcCollateral: bigint;
-  resolved: boolean;
-  outcomeYes: boolean;
 }
 
-export async function getMarketCount(): Promise<number> {
-  if (!marketContract) return 0;
-  const count = await marketContract.getMarketCount();
-  return Number(count);
+/**
+ * Fetch all not-yet-resolved EarthquakeMarket markets on this chain.
+ * Returns an empty list if EarthquakeMarket isn't configured for this network.
+ */
+export async function getUnresolvedMarkets(): Promise<OnChainMarket[]> {
+  if (!marketContract) return [];
+
+  const count = Number(await marketContract.getMarketCount());
+  const markets: OnChainMarket[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const m = await marketContract.getMarket(i);
+    if (m.resolved) continue;
+    markets.push({
+      id: i,
+      centerLat: m.centerLat,
+      centerLng: m.centerLng,
+      radiusKm: m.radiusKm,
+      triggerMagnitude: m.triggerMagnitude,
+      createdAt: m.createdAt,
+      resolutionTime: m.resolutionTime,
+    });
+  }
+
+  return markets;
 }
 
-export async function getMarket(marketId: number): Promise<MarketInfo | null> {
-  if (!marketContract) return null;
-  try {
-    const data = await marketContract.getMarket(marketId);
-    return {
-      description: data[0] as string,
-      centerLat: data[1] as bigint,
-      centerLng: data[2] as bigint,
-      radiusKm: data[3] as bigint,
-      triggerMagnitude: data[4] as bigint,
-      resolutionTime: data[5] as bigint,
-      yesReserve: data[6] as bigint,
-      noReserve: data[7] as bigint,
-      usdcCollateral: data[8] as bigint,
-      resolved: data[9] as boolean,
-      outcomeYes: data[10] as boolean,
-    };
-  } catch (error) {
-    console.error(`[Blockchain] Error fetching market ${marketId}:`, error);
-    return null;
-  }
-}
+/**
+ * Submit a market resolution. A YES claim is verified on-chain against
+ * QuakeShield's recorded quakes; a NO claim only succeeds past resolutionTime.
+ */
+export async function submitMarketResolution(marketId: number, outcomeYes: boolean): Promise<void> {
+  if (!marketContract) return;
 
-export async function resolveMarketOnChain(
-  marketId: number,
-  outcomeYes: boolean
-): Promise<ethers.TransactionReceipt | null> {
-  if (!marketContract) {
-    console.error("[Blockchain] EarthquakeMarket not configured, cannot resolve");
-    return null;
-  }
-  try {
-    console.log(`[Blockchain] Resolving market ${marketId} as ${outcomeYes ? "YES" : "NO"}`);
-    const tx = await marketContract.resolveMarket(marketId, outcomeYes);
-    console.log(`[Blockchain] Resolve tx sent: ${tx.hash}`);
-    const receipt = await tx.wait();
-    console.log(`[Blockchain] Resolve tx confirmed in block ${receipt.blockNumber}`);
-    return receipt;
-  } catch (error) {
-    console.error(`[Blockchain] Error resolving market ${marketId}:`, error);
-    throw error;
-  }
+  console.log(`[Blockchain] Resolving market ${marketId}: ${outcomeYes ? "YES" : "NO"}`);
+  const tx = await marketContract.resolveMarket(marketId, outcomeYes);
+  const receipt = await tx.wait();
+  console.log(`[Blockchain] Market ${marketId} resolved in block ${receipt.blockNumber}`);
 }

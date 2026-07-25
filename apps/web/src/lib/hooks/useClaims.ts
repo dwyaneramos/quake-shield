@@ -4,6 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useAccount, useChainId, usePublicClient } from "wagmi";
 import { QUAKESHIELD_ABI, getContracts, isChainConfigured } from "@/lib/contracts";
 
+// Some public RPCs (e.g. Avalanche Fuji's default endpoint) cap eth_getLogs
+// to a fixed block range per call, so we page through history in chunks
+// rather than requesting the full range in one request.
+const LOG_QUERY_CHUNK_BLOCKS = 2000n;
+
 export interface PayoutClaim {
   policyId: bigint;
   amount: bigint;
@@ -28,14 +33,21 @@ export function useClaims() {
     setIsLoading(true);
     setError(null);
     try {
-      const logs = await publicClient.getContractEvents({
-        address: QUAKESHIELD_ADDRESS as `0x${string}`,
-        abi: QUAKESHIELD_ABI,
-        eventName: "PayoutExecuted",
-        args: { policyholder: address },
-        fromBlock: DEPLOY_BLOCK,
-        toBlock: "latest",
-      });
+      const latestBlock = await publicClient.getBlockNumber();
+      const logs = [];
+      for (let start = DEPLOY_BLOCK; start <= latestBlock; start += LOG_QUERY_CHUNK_BLOCKS) {
+        const end = start + LOG_QUERY_CHUNK_BLOCKS - 1n;
+        logs.push(
+          ...(await publicClient.getContractEvents({
+            address: QUAKESHIELD_ADDRESS as `0x${string}`,
+            abi: QUAKESHIELD_ABI,
+            eventName: "PayoutExecuted",
+            args: { policyholder: address },
+            fromBlock: start,
+            toBlock: end > latestBlock ? latestBlock : end,
+          }))
+        );
+      }
 
       setClaims(
         logs
@@ -49,7 +61,8 @@ export function useClaims() {
           .reverse()
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load claims");
+      console.warn("Failed to load claims:", e);
+      setError("Unable to load claims history right now. Please try again later.");
     } finally {
       setIsLoading(false);
     }
