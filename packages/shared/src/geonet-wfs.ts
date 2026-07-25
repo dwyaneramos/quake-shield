@@ -1,8 +1,19 @@
-import { GEONET } from "@/lib/chains";
-import type { GeoNetQuake } from "@/types";
+export const GEONET_WFS_BASE_URL = "https://wfs.geonet.org.nz/geonet/ows";
+export const GEONET_REST_BASE_URL = "https://api.geonet.org.nz";
 
-const GEONET_WFS_BASE_URL = "https://wfs.geonet.org.nz/geonet/ows";
-const GEONET_REST_BASE_URL = "https://api.geonet.org.nz";
+// ============ Types ============
+
+export interface GeoNetQuake {
+  publicID: string;
+  time: string;
+  depth: number;
+  magnitude: number;
+  locality: string;
+  mmi: number;
+  quality: "best" | "reviewed" | "automatic" | "preliminary" | "deleted";
+  latitude?: number;
+  longitude?: number;
+}
 
 export interface BoundingBox {
   west: number;
@@ -47,6 +58,8 @@ export interface QuakeStats {
   };
 }
 
+// ============ CQL Filter Builder ============
+
 function escapeCQL(value: string): string {
   return value.replace(/'/g, "''");
 }
@@ -78,24 +91,50 @@ function buildCQLFilter(query: WFSQuery): string {
   return parts.join("+AND+");
 }
 
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
+// ============ WFS Client ============
+
+export async function fetchWFSQuakes(query: WFSQuery): Promise<GeoNetQuake[]> {
+  const cql = buildCQLFilter(query);
+  const maxFeatures = query.maxResults ?? 1000;
+
+  const params = new URLSearchParams({
+    service: "WFS",
+    version: "1.0.0",
+    request: "GetFeature",
+    typeName: "geonet:quake_search_v1",
+    maxFeatures: String(maxFeatures),
+    outputFormat: "json",
+  });
+
+  if (cql) {
+    params.set("cql_filter", cql);
+  }
+
+  const url = `${GEONET_WFS_BASE_URL}?${params.toString()}`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`GeoNet WFS error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+
+  const features = data.features ?? [];
+  return features.map((feature: any) => ({
+    publicID: feature.properties?.publicid ?? feature.properties?.publicID ?? "",
+    time: feature.properties?.origintime ?? feature.properties?.time ?? "",
+    depth: feature.properties?.depth ?? 0,
+    magnitude: feature.properties?.magnitude ?? 0,
+    locality: feature.properties?.locality ?? "",
+    mmi: feature.properties?.mmi ?? 0,
+    quality: (feature.properties?.quality ?? "automatic") as GeoNetQuake["quality"],
+    latitude: feature.geometry?.coordinates?.[1],
+    longitude: feature.geometry?.coordinates?.[0],
+  }));
 }
 
-export function haversineDistanceKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
-  const R = 6371;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+// ============ REST API Client ============
 
 export async function fetchRecentQuakesREST(
   mmi: number = -1,
@@ -125,7 +164,7 @@ export async function fetchRecentQuakesREST(
   }));
 }
 
-export async function fetchQuakeByIdWFS(publicID: string): Promise<GeoNetQuake> {
+export async function fetchQuakeById(publicID: string): Promise<GeoNetQuake> {
   const response = await fetch(`${GEONET_REST_BASE_URL}/quake/${publicID}`, {
     headers: {
       Accept: "application/vnd.geo+json;version=2",
@@ -156,47 +195,6 @@ export async function fetchQuakeByIdWFS(publicID: string): Promise<GeoNetQuake> 
   };
 }
 
-export async function fetchWFSQuakes(query: WFSQuery): Promise<GeoNetQuake[]> {
-  const cql = buildCQLFilter(query);
-  const maxFeatures = query.maxResults ?? 1000;
-
-  const params = new URLSearchParams({
-    service: "WFS",
-    version: "1.0.0",
-    request: "GetFeature",
-    typeName: "geonet:quake_search_v1",
-    maxFeatures: String(maxFeatures),
-    outputFormat: "json",
-  });
-
-  if (cql) {
-    params.set("cql_filter", cql);
-  }
-
-  const url = `${GEONET_WFS_BASE_URL}?${params.toString()}`;
-
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`GeoNet WFS error: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const features = data.features ?? [];
-
-  return features.map((feature: any) => ({
-    publicID: feature.properties?.publicid ?? feature.properties?.publicID ?? "",
-    time: feature.properties?.origintime ?? feature.properties?.time ?? "",
-    depth: feature.properties?.depth ?? 0,
-    magnitude: feature.properties?.magnitude ?? 0,
-    locality: feature.properties?.locality ?? "",
-    mmi: feature.properties?.mmi ?? 0,
-    quality: (feature.properties?.quality ?? "automatic") as GeoNetQuake["quality"],
-    latitude: feature.geometry?.coordinates?.[1],
-    longitude: feature.geometry?.coordinates?.[0],
-  }));
-}
-
 export async function fetchQuakeStats(): Promise<QuakeStats> {
   const response = await fetch(`${GEONET_REST_BASE_URL}/quake/stats`, {
     headers: {
@@ -209,6 +207,44 @@ export async function fetchQuakeStats(): Promise<QuakeStats> {
   }
 
   return response.json();
+}
+
+// ============ Market Resolution ============
+
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+export function haversineDistanceKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export function quakeMatchesCriteria(
+  quake: GeoNetQuake,
+  criteria: MarketCriteria,
+): boolean {
+  if (quake.magnitude < criteria.minMagnitude) return false;
+  if (quake.latitude === undefined || quake.longitude === undefined) return false;
+
+  const distance = haversineDistanceKm(
+    criteria.centerLat,
+    criteria.centerLng,
+    quake.latitude,
+    quake.longitude,
+  );
+
+  return distance <= criteria.radiusKm;
 }
 
 export async function resolveMarket(
@@ -229,17 +265,7 @@ export async function resolveMarket(
     maxResults: 100,
   });
 
-  const qualifyingQuake = quakes.find((q) => {
-    if (q.magnitude < criteria.minMagnitude) return false;
-    if (q.latitude === undefined || q.longitude === undefined) return false;
-    const distance = haversineDistanceKm(
-      criteria.centerLat,
-      criteria.centerLng,
-      q.latitude,
-      q.longitude,
-    );
-    return distance <= criteria.radiusKm;
-  });
+  const qualifyingQuake = quakes.find((q) => quakeMatchesCriteria(q, criteria));
 
   return {
     resolved: true,
@@ -249,19 +275,20 @@ export async function resolveMarket(
   };
 }
 
-export function fetchRecentQuakes(mmi: number = GEONET.MMI_THRESHOLD): Promise<GeoNetQuake[]> {
-  return fetchRecentQuakesREST(mmi);
-}
+// ============ NZ Region Constants ============
 
-export function bboxFromRadius(centerLat: number, centerLng: number, radiusKm: number): BoundingBox {
-  return {
-    west: centerLng - radiusKm / 83,
-    east: centerLng + radiusKm / 83,
-    south: centerLat - radiusKm / 111,
-    north: centerLat + radiusKm / 111,
-  };
-}
+export const NZ_BOUNDS: BoundingBox = {
+  north: -34.0,
+  south: -48.0,
+  east: 179.0,
+  west: 165.0,
+};
 
-export function fetchQuakesByRegion(query: WFSQuery): Promise<GeoNetQuake[]> {
-  return fetchWFSQuakes(query);
-}
+export const NZ_REGIONS: Record<string, { lat: number; lng: number }> = {
+  "Wellington": { lat: -41.2858, lng: 174.778 },
+  "Auckland": { lat: -36.8485, lng: 174.7633 },
+  "Christchurch": { lat: -43.53, lng: 172.636 },
+  "Queenstown": { lat: -45.0312, lng: 168.6626 },
+  "Napier": { lat: -39.4928, lng: 176.912 },
+  "Dunedin": { lat: -45.8788, lng: 170.5028 },
+};

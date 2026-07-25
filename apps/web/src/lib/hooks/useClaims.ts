@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useAccount, usePublicClient } from "wagmi";
-import { CONTRACTS, CONTRACTS_CONFIGURED, QUAKESHIELD_ABI } from "@/lib/contracts";
+import { useAccount, useChainId, usePublicClient } from "wagmi";
+import { QUAKESHIELD_ABI, getContracts, isChainConfigured } from "@/lib/contracts";
 
 export interface PayoutClaim {
   policyId: bigint;
@@ -12,24 +12,24 @@ export interface PayoutClaim {
   transactionHash: `0x${string}`;
 }
 
-// Deployment block lets us avoid scanning the whole chain history on every load.
-const DEPLOY_BLOCK = BigInt(process.env.NEXT_PUBLIC_QUAKE_SHIELD_DEPLOY_BLOCK || "0");
-
 /** Payouts the connected wallet has received, read from PayoutExecuted event logs. */
 export function useClaims() {
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const { QUAKESHIELD_ADDRESS, DEPLOY_BLOCK } = getContracts(chainId);
+  const configured = isChainConfigured(chainId);
   const publicClient = usePublicClient();
   const [claims, setClaims] = useState<PayoutClaim[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!publicClient || !address || !CONTRACTS_CONFIGURED) return;
+    if (!publicClient || !address || !configured) return;
     setIsLoading(true);
     setError(null);
     try {
       const logs = await publicClient.getContractEvents({
-        address: CONTRACTS.QUAKESHIELD_ADDRESS as `0x${string}`,
+        address: QUAKESHIELD_ADDRESS as `0x${string}`,
         abi: QUAKESHIELD_ABI,
         eventName: "PayoutExecuted",
         args: { policyholder: address },
@@ -53,7 +53,7 @@ export function useClaims() {
     } finally {
       setIsLoading(false);
     }
-  }, [address, publicClient]);
+  }, [address, publicClient, QUAKESHIELD_ADDRESS, DEPLOY_BLOCK, configured]);
 
   useEffect(() => {
     load();

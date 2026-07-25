@@ -1,44 +1,181 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { useAccount } from "wagmi";
-import { ConnectButton } from "@/components/web3/ConnectButton";
+import { useSearchParams } from "next/navigation";
+import { useMemo, useState, useEffect, Suspense, useCallback } from "react";
+import { useAccount, useChainId } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { Header } from "@/components/layout/Header";
-import { CONTRACTS_CONFIGURED } from "@/lib/contracts";
+import { isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
-import { POLYGON_AMOY } from "@/lib/polygon";
+import { getExplorerUrl } from "@/lib/chains";
+import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
 import { SCALE } from "@/types";
 
 const MAX_COVERAGE_USDC = 10_000;
 
-const NZ_REGIONS = [
-  { label: "Wellington", lat: -41.2865, lng: 174.7762 },
-  { label: "Christchurch / Canterbury", lat: -43.5321, lng: 172.6362 },
-  { label: "Auckland", lat: -36.8485, lng: 174.7633 },
-  { label: "Kaikōura", lat: -42.4, lng: 173.68 },
-  { label: "Dunedin", lat: -45.8788, lng: 170.5028 },
-  { label: "Hamilton", lat: -37.787, lng: 175.2793 },
-  { label: "Custom location", lat: null, lng: null },
+const REGIONS = [
+  ...NZ_CITIES.map((c) => ({ label: c.name, id: c.id, lat: c.lat, lng: c.lng })),
+  { label: "Custom location", id: "custom", lat: null, lng: null },
 ] as const;
 
-export default function BuyPolicyPage() {
+interface TrendPoint {
+  time: string;
+  probability: number;
+  quakeCount: number;
+  maxMagnitude: number;
+}
+
+interface CityData {
+  currentProbability: number;
+  recentQuakeCount: number;
+  trend: TrendPoint[];
+}
+
+function CityMiniGraph({ cityId }: { cityId: string }) {
+  const [data, setData] = useState<CityData | null>(null);
+
+  const fetchCity = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/geonet/city?city=${cityId}`);
+      if (res.ok) setData(await res.json());
+    } catch {}
+  }, [cityId]);
+
+  useEffect(() => {
+    fetchCity();
+    const i = setInterval(fetchCity, 30000);
+    return () => clearInterval(i);
+  }, [fetchCity]);
+
+  const trend = data?.trend ?? [];
+  const prob = data?.currentProbability ?? 0;
+  const dataMax = trend.length > 0 ? Math.max(...trend.map((p) => p.probability)) : 0.01;
+  const yMax = Math.max(dataMax * 1.3, 0.001);
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-ink-200 overflow-hidden">
+      <div className="px-6 pt-6 pb-2">
+        <p className="text-ink-500 text-xs font-medium uppercase tracking-wider">
+          30-Day Seismic Trend
+        </p>
+        <div className="flex items-baseline gap-2 mt-1">
+          <span className="text-4xl font-black tabular-nums text-shield-600">
+            {prob.toFixed(4)}
+          </span>
+          <span className="text-lg font-bold text-ink-400">%</span>
+          <span className="text-ink-500 text-sm ml-1">M5+ probability</span>
+        </div>
+      </div>
+      <div className="px-2 pb-2 h-[180px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={trend} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="buyGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#15805c" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="#15805c" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e9edf3" vertical={false} />
+            <XAxis
+              dataKey="time"
+              stroke="#aab8cc"
+              tick={{ fill: "#7c8fab", fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              domain={[0, yMax]}
+              stroke="#aab8cc"
+              tick={{ fill: "#7c8fab", fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v: number) => `${v.toFixed(2)}%`}
+              width={50}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "#fff",
+                border: "1px solid #d1dae5",
+                borderRadius: "8px",
+                fontSize: "12px",
+              }}
+              formatter={(value) => [`${Number(value).toFixed(4)}%`, "Probability"]}
+            />
+            <Area
+              type="monotone"
+              dataKey="probability"
+              stroke="#15805c"
+              strokeWidth={2}
+              fill="url(#buyGrad)"
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="px-6 py-3 bg-ink-50/50 border-t border-ink-100 grid grid-cols-3 gap-4 text-center text-xs">
+        <div>
+          <p className="text-ink-900 font-semibold">{data?.recentQuakeCount ?? "--"}</p>
+          <p className="text-ink-400">quakes past 30d</p>
+        </div>
+        <div>
+          <p className="text-ink-900 font-semibold">{CITY_RADIUS_KM}km</p>
+          <p className="text-ink-400">radius</p>
+        </div>
+        <div>
+          <p className="text-ink-900 font-semibold">M{magnitudeDisplay}</p>
+          <p className="text-ink-400">your trigger</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+let magnitudeDisplay = "6.0";
+
+function BuyPolicyForm() {
+  const searchParams = useSearchParams();
+  const initialCity = searchParams.get("city");
+
+  const initialIndex = useMemo(() => {
+    if (!initialCity) return 0;
+    const idx = NZ_CITIES.findIndex((c) => c.id === initialCity);
+    return idx >= 0 ? idx : 0;
+  }, [initialCity]);
+
   const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const chainConfigured = isChainConfigured(chainId);
+  const { openConnectModal } = useConnectModal();
   const { buyPolicy, step, error, isPending, buyTxHash, reset } = useBuyPolicy();
   const { stats } = usePoolStats();
 
-  const [regionIndex, setRegionIndex] = useState(0);
+  const [regionIndex, setRegionIndex] = useState(initialIndex);
   const [customLat, setCustomLat] = useState("-41.2865");
   const [customLng, setCustomLng] = useState("174.7762");
   const [coverage, setCoverage] = useState("1000");
   const [magnitude, setMagnitude] = useState("6.0");
   const [radius, setRadius] = useState("50");
 
-  const region = NZ_REGIONS[regionIndex];
+  magnitudeDisplay = magnitude;
+
+  const region = REGIONS[regionIndex];
   const isCustom = region.lat === null;
   const lat = isCustom ? customLat : String(region.lat);
   const lng = isCustom ? customLng : String(region.lng);
+  const selectedCityId = isCustom ? "wellington" : region.id;
 
   const coverageNum = Number(coverage) || 0;
   const magnitudeNum = Number(magnitude) || 0;
@@ -54,7 +191,7 @@ export default function BuyPolicyPage() {
     return null;
   }, [coverageNum, magnitudeNum, radiusNum, lat, lng]);
 
-  const canSubmit = isConnected && CONTRACTS_CONFIGURED && !validation && !isPending;
+  const canSubmit = isConnected && chainConfigured && !validation && !isPending;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -64,28 +201,24 @@ export default function BuyPolicyPage() {
       centerLat: SCALE.toLatLng(Number(lat)),
       centerLng: SCALE.toLatLng(Number(lng)),
       radiusKm: BigInt(Math.round(radiusNum)),
-    }).catch(() => {
-      /* surfaced via `error` state */
-    });
+    }).catch(() => {});
   };
 
   return (
     <div className="min-h-screen bg-ink-50">
-      <Header />
-
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-ink-900 mb-2">Buy Earthquake Policy</h1>
         <p className="text-ink-600 mb-8">Set your trigger conditions and coverage amount.</p>
 
-        {!CONTRACTS_CONFIGURED && (
+        {!chainConfigured && (
           <div className="bg-quake-50 border border-quake-200 text-quake-800 rounded-xl p-4 mb-6 text-sm">
-            Contracts aren&rsquo;t deployed yet, so purchases are disabled. Set the contract addresses in{" "}
-            <code>apps/web/.env.local</code> to enable buying.
+            QuakeShield isn&rsquo;t deployed on this network, so purchases are disabled. Switch networks in
+            your wallet, or set the contract addresses in the root <code>.env</code> to enable buying.
           </div>
         )}
 
         {step === "done" ? (
-          <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-8 text-center">
+          <div className="max-w-xl mx-auto bg-white rounded-xl shadow-sm border border-ink-100 p-8 text-center">
             <div className="w-16 h-16 bg-shield-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-shield-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -95,12 +228,12 @@ export default function BuyPolicyPage() {
             <p className="text-ink-600 mb-6">You&rsquo;re covered. You&rsquo;ll be paid automatically if the trigger fires.</p>
             {buyTxHash && (
               <a
-                href={`${POLYGON_AMOY.blockExplorers.default.url}/tx/${buyTxHash}`}
+                href={`${getExplorerUrl(chainId)}/tx/${buyTxHash}`}
                 target="_blank"
                 rel="noreferrer"
                 className="text-sm font-medium text-shield-600 hover:text-shield-700 block mb-6"
               >
-                View transaction on Polygonscan →
+                View transaction on the block explorer →
               </a>
             )}
             <div className="flex gap-3 justify-center">
@@ -117,7 +250,8 @@ export default function BuyPolicyPage() {
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-8">
+          <div className="grid lg:grid-cols-5 gap-8">
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-ink-100 p-8 h-fit">
             <form
               className="space-y-6"
               onSubmit={(e) => {
@@ -168,7 +302,7 @@ export default function BuyPolicyPage() {
                   onChange={(e) => setRegionIndex(Number(e.target.value))}
                   className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500 mb-3"
                 >
-                  {NZ_REGIONS.map((r, i) => (
+                  {REGIONS.map((r, i) => (
                     <option key={r.label} value={i}>
                       {r.label}
                     </option>
@@ -200,63 +334,85 @@ export default function BuyPolicyPage() {
                 )}
               </div>
 
-              {/* Radius */}
-              <div>
-                <label className="block text-sm font-medium text-ink-700 mb-2">Coverage Radius (km)</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={500}
-                  value={radius}
-                  onChange={(e) => setRadius(e.target.value)}
-                  className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-                />
-                <p className="text-sm text-ink-500 mt-1">How far from the center point should coverage extend? (1-500 km)</p>
+            {/* Radius */}
+            <div>
+              <label className="block text-sm font-medium text-ink-700 mb-1.5">Radius (km)</label>
+              <input
+                type="number"
+                min={1}
+                max={500}
+                value={radius}
+                onChange={(e) => setRadius(e.target.value)}
+                className="w-full border border-ink-200 rounded-lg px-3 py-2.5 text-sm text-ink-900 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+              />
+            </div>
+
+            {/* Summary */}
+            <div className="bg-ink-50 rounded-lg p-4 border border-ink-100 text-sm space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-ink-500">Coverage</span>
+                <span className="font-medium text-ink-900">{coverageNum.toLocaleString()} USDC</span>
               </div>
-
-              {/* Summary */}
-              <div className="bg-ink-50 rounded-lg p-4">
-                <h3 className="font-medium text-ink-900 mb-2">Policy Summary</h3>
-                <div className="text-sm text-ink-600 space-y-1">
-                  <p>
-                    Coverage: <span className="font-medium">{coverageNum.toLocaleString()} USDC</span>
-                  </p>
-                  <p>
-                    Premium (1%): <span className="font-medium">{premium.toLocaleString()} USDC</span>
-                  </p>
-                  <p>
-                    Trigger:{" "}
-                    <span className="font-medium">
-                      Magnitude ≥ {magnitudeNum.toFixed(1)} within {radiusNum || "--"}km of {region.label}
-                    </span>
-                  </p>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-ink-500">Payout if triggered</span>
+                <span className="font-semibold text-shield-700">{coverageNum.toLocaleString()} USDC</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-ink-500">Premium</span>
+                <span className="font-medium text-ink-900">{premium.toLocaleString()} USDC</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-ink-500">Trigger</span>
+                <span className="font-medium text-ink-900">M≥{magnitudeNum.toFixed(1)} · {radiusNum}km</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-ink-500">Location</span>
+                <span className="font-medium text-ink-900">{region.label}</span>
+              </div>
+            </div>
 
-              {validation && <p className="text-sm text-quake-700">{validation}</p>}
-              {error && <p className="text-sm text-quake-700">{error}</p>}
+            {validation && <p className="text-sm text-quake-700 bg-quake-50 border border-quake-200 rounded-lg px-3 py-2">{validation}</p>}
+            {error && <p className="text-sm text-quake-700 bg-quake-50 border border-quake-200 rounded-lg px-3 py-2">{error}</p>}
 
-              {!isConnected ? (
-                <div className="flex justify-center">
-                  <ConnectButton />
-                </div>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={!canSubmit}
-                  className="w-full bg-shield-600 text-white py-3 rounded-lg font-semibold hover:bg-shield-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {step === "approving"
-                    ? "Approving USDC…"
-                    : step === "buying"
-                      ? "Buying policy…"
-                      : "Buy Policy"}
-                </button>
-              )}
-            </form>
+            <button
+              type="submit"
+              onClick={(e) => {
+                if (!isConnected) {
+                  e.preventDefault();
+                  openConnectModal?.();
+                }
+              }}
+              className="w-full bg-shield-600 text-white py-3 rounded-lg font-semibold hover:bg-shield-700 transition-colors"
+            >
+              {step === "approving" ? "Approving USDC…" : step === "buying" ? "Buying policy…" : "Buy Policy"}
+            </button>
+          </form>
+        </div>
+
+        {/* Right: City Data */}
+        <div className="lg:col-span-3">
+          <div className="mb-3">
+            <h2 className="text-lg font-bold text-ink-900">
+              {isCustom ? "Custom Location" : region.label}
+            </h2>
+            <p className="text-ink-500 text-sm">Live seismic data for this area</p>
+          </div>
+            <CityMiniGraph cityId={selectedCityId} />
+          </div>
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+export default function BuyPolicyPage() {
+  return (
+    <div className="min-h-screen bg-white">
+      <Header />
+      <Suspense>
+        <BuyPolicyForm />
+      </Suspense>
     </div>
   );
 }

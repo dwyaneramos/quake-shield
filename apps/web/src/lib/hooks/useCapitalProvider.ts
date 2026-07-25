@@ -1,31 +1,28 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useAccount, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { CONTRACTS, CONTRACTS_CONFIGURED, MOCK_USDC_ABI, QUAKESHIELD_ABI } from "@/lib/contracts";
+import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
+import { MOCK_USDC_ABI, QUAKESHIELD_ABI, getContracts, isChainConfigured } from "@/lib/contracts";
 import type { ProviderPosition } from "@/types";
 
 export type DepositStep = "idle" | "approving" | "depositing" | "done" | "error";
 
-const quakeShieldContract = {
-  address: CONTRACTS.QUAKESHIELD_ADDRESS as `0x${string}`,
-  abi: QUAKESHIELD_ABI,
-} as const;
-
 /** Deposit USDC as a capital provider (approve + deposit). */
 export function useDeposit() {
   const { address } = useAccount();
+  const chainId = useChainId();
+  const { QUAKESHIELD_ADDRESS, USDC_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
   const [step, setStep] = useState<DepositStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: CONTRACTS.USDC_ADDRESS as `0x${string}`,
+    address: USDC_ADDRESS as `0x${string}`,
     abi: MOCK_USDC_ABI,
     functionName: "allowance",
-    args: address ? [address, CONTRACTS.QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
-    query: { enabled: Boolean(address) },
+    args: address ? [address, QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
+    query: { enabled: Boolean(address && USDC_ADDRESS) },
   });
 
   const { writeContractAsync } = useWriteContract();
@@ -42,10 +39,10 @@ export function useDeposit() {
         if (currentAllowance < amount) {
           setStep("approving");
           const approveHash = await writeContractAsync({
-            address: CONTRACTS.USDC_ADDRESS as `0x${string}`,
+            address: USDC_ADDRESS as `0x${string}`,
             abi: MOCK_USDC_ABI,
             functionName: "approve",
-            args: [CONTRACTS.QUAKESHIELD_ADDRESS as `0x${string}`, amount],
+            args: [QUAKESHIELD_ADDRESS as `0x${string}`, amount],
           });
           await publicClient.waitForTransactionReceipt({ hash: approveHash });
           await refetchAllowance();
@@ -53,7 +50,8 @@ export function useDeposit() {
 
         setStep("depositing");
         const hash = await writeContractAsync({
-          ...quakeShieldContract,
+          address: QUAKESHIELD_ADDRESS as `0x${string}`,
+          abi: QUAKESHIELD_ABI,
           functionName: "deposit",
           args: [amount],
         });
@@ -67,7 +65,7 @@ export function useDeposit() {
         throw e;
       }
     },
-    [allowance, publicClient, refetchAllowance, writeContractAsync]
+    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, USDC_ADDRESS]
   );
 
   return {
@@ -86,6 +84,8 @@ export function useDeposit() {
 
 /** Withdraw full capital position. */
 export function useWithdraw() {
+  const chainId = useChainId();
+  const { QUAKESHIELD_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
   const [step, setStep] = useState<"idle" | "withdrawing" | "done" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +101,8 @@ export function useWithdraw() {
     try {
       setStep("withdrawing");
       const hash = await writeContractAsync({
-        ...quakeShieldContract,
+        address: QUAKESHIELD_ADDRESS as `0x${string}`,
+        abi: QUAKESHIELD_ABI,
         functionName: "withdraw",
       });
       setTxHash(hash);
@@ -112,7 +113,7 @@ export function useWithdraw() {
       setError(e instanceof Error ? e.message : "Transaction failed");
       throw e;
     }
-  }, [publicClient, writeContractAsync]);
+  }, [publicClient, writeContractAsync, QUAKESHIELD_ADDRESS]);
 
   return {
     withdraw,
@@ -131,13 +132,17 @@ export function useWithdraw() {
 /** Read the connected wallet's capital provider position. */
 export function useMyPosition() {
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const { QUAKESHIELD_ADDRESS } = getContracts(chainId);
+  const configured = isChainConfigured(chainId);
 
   const { data, isLoading, refetch } = useReadContract({
-    ...quakeShieldContract,
+    address: QUAKESHIELD_ADDRESS as `0x${string}`,
+    abi: QUAKESHIELD_ABI,
     functionName: "getProviderInfo",
     args: address ? [address] : undefined,
     query: {
-      enabled: CONTRACTS_CONFIGURED && isConnected && Boolean(address),
+      enabled: configured && isConnected && Boolean(address),
       refetchInterval: 15_000,
     },
   });

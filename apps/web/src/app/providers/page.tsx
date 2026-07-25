@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import { ConnectButton } from "@/components/web3/ConnectButton";
 import { Header } from "@/components/layout/Header";
-import { CONTRACTS_CONFIGURED } from "@/lib/contracts";
+import { isChainConfigured } from "@/lib/contracts";
 import { useDeposit, useMyPosition, useWithdraw } from "@/lib/hooks/useCapitalProvider";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
-import { POLYGON_AMOY } from "@/lib/polygon";
+import { getExplorerUrl } from "@/lib/chains";
 import { SCALE } from "@/types";
 
 export default function ProvidersPage() {
   const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const chainConfigured = isChainConfigured(chainId);
   const { stats } = usePoolStats();
   const { position } = useMyPosition();
   const { deposit, step: depositStep, error: depositError, txHash: depositTxHash, reset: resetDeposit } = useDeposit();
@@ -54,7 +56,7 @@ export default function ProvidersPage() {
           </Link>
         </div>
 
-        {!CONTRACTS_CONFIGURED && (
+        {!chainConfigured && (
           <div className="bg-quake-50 border border-quake-200 text-quake-800 rounded-xl p-4 mb-6 text-sm">
             Contracts aren&rsquo;t deployed yet. Set the contract addresses in{" "}
             <code>apps/web/.env.local</code> to enable deposits.
@@ -144,7 +146,7 @@ export default function ProvidersPage() {
                         <p className="font-medium text-shield-700 mb-2">Withdrawal successful!</p>
                         {withdrawTxHash && (
                           <a
-                            href={`${POLYGON_AMOY.blockExplorers.default.url}/tx/${withdrawTxHash}`}
+                            href={`${getExplorerUrl(chainId)}/tx/${withdrawTxHash}`}
                             target="_blank"
                             rel="noreferrer"
                             className="text-sm text-shield-600 hover:text-shield-700"
@@ -212,7 +214,7 @@ export default function ProvidersPage() {
                     <p className="font-medium text-shield-700 mb-2">Deposit successful!</p>
                     {depositTxHash && (
                       <a
-                        href={`${POLYGON_AMOY.blockExplorers.default.url}/tx/${depositTxHash}`}
+                        href={`${getExplorerUrl(chainId)}/tx/${depositTxHash}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-sm text-shield-600 hover:text-shield-700"

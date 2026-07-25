@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { GEONET } from "@/lib/polygon";
+import { GEONET } from "@/lib/chains";
+import { haversineDistanceKm } from "@/lib/geonet";
 import type { GeoNetQuake } from "@/types";
 
 const QuakeMap = dynamic(() => import("./QuakeMap").then((mod) => mod.QuakeMap), {
@@ -32,7 +33,27 @@ function magnitudeColor(magnitude: number): string {
   return "bg-quake-50 text-quake-600";
 }
 
-export function QuakesClient({ initialQuakes }: { initialQuakes: GeoNetQuake[] }) {
+interface MarketCriteriaProps {
+  centerLat: number;
+  centerLng: number;
+  radiusKm: number;
+  minMagnitude: number;
+}
+
+function quakeMatchesMarket(quake: GeoNetQuake, criteria: MarketCriteriaProps): boolean {
+  if (quake.magnitude < criteria.minMagnitude) return false;
+  if (quake.latitude === undefined || quake.longitude === undefined) return false;
+  const distance = haversineDistanceKm(criteria.centerLat, criteria.centerLng, quake.latitude, quake.longitude);
+  return distance <= criteria.radiusKm;
+}
+
+export function QuakesClient({
+  initialQuakes,
+  marketCriteria,
+}: {
+  initialQuakes: GeoNetQuake[];
+  marketCriteria?: MarketCriteriaProps;
+}) {
   const [quakes, setQuakes] = useState(initialQuakes);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState(new Date());
@@ -86,29 +107,44 @@ export function QuakesClient({ initialQuakes }: { initialQuakes: GeoNetQuake[] }
         <div className="p-6 border-b border-ink-100">
           <h2 className="text-xl font-semibold text-ink-900">Recent Quakes</h2>
           <p className="text-sm text-ink-500 mt-1">
-            Quakes with MMI ≥ {GEONET.MMI_THRESHOLD} from the past 365 days
+            Quakes from the past 365 days
           </p>
         </div>
         <div className="divide-y divide-ink-100">
           {quakes.length === 0 ? (
             <p className="p-8 text-center text-ink-500">No recent quakes above the MMI threshold.</p>
           ) : (
-            quakes.map((quake) => (
-              <div key={quake.publicID} className="p-4 hover:bg-ink-50 flex items-center gap-4">
+            quakes.map((quake) => {
+              const isMatch = marketCriteria ? quakeMatchesMarket(quake, marketCriteria) : false;
+              return (
                 <div
-                  className={`w-14 h-14 rounded-lg flex items-center justify-center font-bold text-lg ${magnitudeColor(quake.magnitude)}`}
+                  key={quake.publicID}
+                  className={`p-4 hover:bg-ink-50 flex items-center gap-4 ${
+                    isMatch ? "bg-shield-50 border-l-4 border-shield-500" : ""
+                  }`}
                 >
-                  {quake.magnitude.toFixed(1)}
+                  <div
+                    className={`w-14 h-14 rounded-lg flex items-center justify-center font-bold text-lg ${magnitudeColor(quake.magnitude)}`}
+                  >
+                    {quake.magnitude.toFixed(1)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-ink-900">
+                      {quake.locality}
+                      {isMatch && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-shield-100 text-shield-700">
+                          Matches market criteria
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-sm text-ink-500">
+                      Depth: {quake.depth.toFixed(1)} km · {relativeTime(quake.time)}
+                    </p>
+                  </div>
+                  <span className="text-xs text-ink-400 uppercase">{quake.quality}</span>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-ink-900">{quake.locality}</p>
-                  <p className="text-sm text-ink-500">
-                    Depth: {quake.depth.toFixed(1)} km · {relativeTime(quake.time)}
-                  </p>
-                </div>
-                <span className="text-xs text-ink-400 uppercase">{quake.quality}</span>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
