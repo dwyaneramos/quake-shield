@@ -3,8 +3,14 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { GEONET } from "@/lib/chains";
+import { useAccount, useChainId } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { GEONET, getExplorerUrl } from "@/lib/chains";
+import { NZ_CITIES } from "@/lib/cities";
+import { isChainConfigured } from "@/lib/contracts";
+import { useSimulateEarthquake } from "@/lib/hooks/useSimulateEarthquake";
 import { haversineDistanceKm, getMagnitudeLabel } from "@quakeshield/shared";
+import { SCALE } from "@/types";
 import type { GeoNetQuake } from "@/types";
 
 const QuakeMap = dynamic(() => import("./QuakeMap").then((mod) => mod.QuakeMap), {
@@ -132,6 +138,8 @@ export function QuakesClient({
         </p>
       </div>
 
+      <SimulateEarthquakePanel onSimulated={(quake) => setQuakes((prev) => [quake, ...prev])} />
+
       {error && (
         <div className="bg-quake-50 border border-quake-200 text-quake-800 rounded-xl p-4 mb-6 text-sm flex items-center gap-2">
           <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,6 +219,154 @@ export function QuakesClient({
         )}
       </div>
     </>
+  );
+}
+
+const DEFAULT_SIM_MAGNITUDE = "7.0";
+const DEFAULT_SIM_DEPTH = "10";
+
+/** Demo-only control: records a fake earthquake on-chain via the same
+ * `recordEarthquake` entry point the real GeoNet oracle uses, so it triggers
+ * real policy payouts for the selected city. Only works if the connected
+ * wallet is the deployment's configured oracle — otherwise the tx reverts. */
+function SimulateEarthquakePanel({ onSimulated }: { onSimulated: (quake: GeoNetQuake) => void }) {
+  const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const chainConfigured = isChainConfigured(chainId);
+  const { openConnectModal } = useConnectModal();
+  const { simulateEarthquake, step, error, isPending, txHash, reset } = useSimulateEarthquake();
+
+  const [cityId, setCityId] = useState(NZ_CITIES[0].id);
+  const [magnitude, setMagnitude] = useState(DEFAULT_SIM_MAGNITUDE);
+  const [depth, setDepth] = useState(DEFAULT_SIM_DEPTH);
+
+  const city = NZ_CITIES.find((c) => c.id === cityId) ?? NZ_CITIES[0];
+  const magnitudeNum = Number(magnitude) || 0;
+  const depthNum = Number(depth) || 0;
+  const validation = magnitudeNum <= 0 ? "Magnitude must be greater than 0" : null;
+  const canSubmit = isConnected && chainConfigured && !validation && !isPending;
+
+  const handleSimulate = async () => {
+    if (!canSubmit) return;
+    const publicId = `sim-${city.id}-${Date.now()}`;
+    await simulateEarthquake({
+      magnitude: SCALE.toMagnitude(magnitudeNum),
+      latitude: SCALE.toLatLng(city.lat),
+      longitude: SCALE.toLatLng(city.lng),
+      depth: BigInt(Math.round(depthNum)),
+      publicId,
+    })
+      .then(() => {
+        onSimulated({
+          publicID: publicId,
+          time: new Date().toISOString(),
+          depth: depthNum,
+          magnitude: magnitudeNum,
+          locality: `${city.name} (simulated)`,
+          mmi: Math.min(12, Math.round(magnitudeNum * 1.5)),
+          quality: "automatic",
+          latitude: city.lat,
+          longitude: city.lng,
+        });
+      })
+      .catch(() => {});
+  };
+
+  return (
+    <div className="bg-amber-50 border border-dashed border-amber-300 rounded-2xl p-5 mb-8">
+      <div className="flex items-center gap-2 mb-1">
+        <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h2 className="text-sm font-semibold text-amber-800 uppercase tracking-wide">Demo: Simulate Earthquake</h2>
+      </div>
+      <p className="text-sm text-amber-700 mb-4">
+        Record a fake quake on-chain for a city to trigger a payout on matching policies — for demo purposes only.
+      </p>
+
+      {!chainConfigured ? (
+        <p className="text-sm text-amber-700">QuakeShield isn&rsquo;t deployed on this network, so simulation is disabled.</p>
+      ) : step === "done" ? (
+        <div>
+          <p className="text-sm font-medium text-shield-700 mb-1">
+            M{magnitudeNum.toFixed(1)} quake recorded near {city.name} — matching policies should now show a payout.
+          </p>
+          <div className="flex items-center gap-4 mt-2">
+            {txHash && (
+              <a
+                href={`${getExplorerUrl(chainId)}/tx/${txHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-medium text-shield-600 hover:text-shield-700"
+              >
+                View transaction →
+              </a>
+            )}
+            <Link href="/policies" className="text-xs font-medium text-shield-600 hover:text-shield-700">
+              Check policies →
+            </Link>
+            <button onClick={reset} type="button" className="text-xs text-ink-400 hover:text-ink-600">
+              Simulate another
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs font-medium text-amber-800 mb-1">City</label>
+            <select
+              value={cityId}
+              onChange={(e) => setCityId(e.target.value)}
+              className="border border-amber-300 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+            >
+              {NZ_CITIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-amber-800 mb-1">Magnitude</label>
+            <input
+              type="number"
+              step="0.1"
+              min={0}
+              value={magnitude}
+              onChange={(e) => setMagnitude(e.target.value)}
+              className="w-24 border border-amber-300 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-amber-800 mb-1">Depth (km)</label>
+            <input
+              type="number"
+              min={0}
+              value={depth}
+              onChange={(e) => setDepth(e.target.value)}
+              className="w-24 border border-amber-300 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!isConnected) {
+                openConnectModal?.();
+                return;
+              }
+              handleSimulate();
+            }}
+            disabled={!isConnected ? false : !canSubmit}
+            className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-amber-700 transition-colors disabled:opacity-50"
+          >
+            {!isConnected ? "Connect Wallet" : isPending ? "Recording…" : "Simulate Earthquake"}
+          </button>
+        </div>
+      )}
+
+      {validation && isConnected && <p className="text-xs text-quake-700 mt-2">{validation}</p>}
+      {error && <p className="text-xs text-quake-700 mt-2">{error}</p>}
+    </div>
   );
 }
 
