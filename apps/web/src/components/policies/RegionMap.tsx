@@ -1,9 +1,9 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { LatLngBoundsExpression } from "leaflet";
-import { MapContainer, Marker, Rectangle, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, Marker, Polygon, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { Icon } from "leaflet";
 import type { NZRegion } from "@quakeshield/shared";
 
@@ -36,13 +36,15 @@ export function RegionMap({
   markerLng: number;
   markerLabel: string;
 }) {
-  // The region's actual coverage box — the same south/north/west/east bounds
-  // the contract and the investment pool use to decide whether a quake struck
-  // here, so what's drawn always matches what's insured.
-  const bounds: LatLngBoundsExpression = [
-    [region.south, region.west],
-    [region.north, region.east],
-  ];
+  // The region's real boundary — the same polygon the oracle tests a quake's
+  // epicenter against, so what's drawn always matches what's insured.
+  const bounds: LatLngBoundsExpression = useMemo(
+    () => [
+      [region.south, region.west],
+      [region.north, region.east],
+    ],
+    [region],
+  );
 
   return (
     <MapContainer
@@ -56,8 +58,8 @@ export function RegionMap({
         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
       />
-      <Rectangle
-        bounds={bounds}
+      <Polygon
+        positions={region.boundary}
         pathOptions={{
           color: "#15805c",
           weight: 2,

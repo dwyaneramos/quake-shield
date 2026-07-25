@@ -12,7 +12,12 @@ import {
   runAccrual,
   getAccrualPeriodSeconds,
 } from "./signer.js";
-import { computeRiskScoreBps, countQuakesInRegion, RISK_MIN_MAGNITUDE } from "./risk.js";
+import {
+  computeRiskScoreBps,
+  countQuakesInRegion,
+  regionIdsForPoint,
+  RISK_MIN_MAGNITUDE,
+} from "./risk.js";
 import { env } from "./config.js";
 
 const submittedQuakes = new Set<string>();
@@ -43,10 +48,15 @@ async function pollAndRecord(): Promise<void> {
       if (magnitudeScaled < env.MIN_MAGITUDE_TO_REPORT) continue;
       if (quake.latitude === undefined || quake.longitude === undefined) continue;
 
+      // The contract has no boundary geometry of its own — compute which
+      // regions' real boundaries the epicenter falls inside here, off-chain,
+      // and attest to it in the same transaction as the quake itself.
+      const regionIds = regionIdsForPoint(quake.latitude, quake.longitude);
+
       try {
         await recordEarthquake(
           magnitudeScaled, latLngToScaled(quake.latitude), latLngToScaled(quake.longitude),
-          BigInt(Math.round(quake.depth)), quake.publicID
+          BigInt(Math.round(quake.depth)), quake.publicID, regionIds
         );
         submittedQuakes.add(quake.publicID);
         newQuakes++;
@@ -96,8 +106,8 @@ export async function refreshRegionRisk(): Promise<void> {
   const changedScores: number[] = [];
 
   for (const region of regions) {
-    const score = computeRiskScoreBps(quakes, region);
-    const count = countQuakesInRegion(quakes, region);
+    const score = computeRiskScoreBps(quakes, region.id);
+    const count = countQuakesInRegion(quakes, region.id);
     const delta = Math.abs(score - region.riskScoreBps);
 
     console.log(

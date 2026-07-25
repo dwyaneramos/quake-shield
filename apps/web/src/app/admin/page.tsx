@@ -9,6 +9,7 @@ import { useSimulateEarthquake } from "@/lib/hooks/useSimulateEarthquake";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
 import { isChainConfigured, getContracts } from "@/lib/contracts";
 import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
+import { NZ_REGIONS, regionsForPoint } from "@quakeshield/shared";
 import { SCALE } from "@/types";
 import { getExplorerUrl } from "@/lib/chains";
 import type L from "leaflet";
@@ -139,6 +140,9 @@ export default function AdminPage() {
       longitude: SCALE.toLatLng(epicenter[1]),
       depth: BigInt(Math.round(depthNum)),
       publicId,
+      regionIds: regionsForPoint(epicenter[0], epicenter[1]).map((r) =>
+        NZ_REGIONS.findIndex((region) => region.id === r.id),
+      ),
     })
       .then(() => {
         setHistory((prev) => [

@@ -9,7 +9,7 @@ import { GEONET, getExplorerUrl } from "@/lib/chains";
 import { NZ_CITIES } from "@/lib/cities";
 import { isChainConfigured } from "@/lib/contracts";
 import { useSimulateEarthquake } from "@/lib/hooks/useSimulateEarthquake";
-import { haversineDistanceKm, getMagnitudeLabel } from "@quakeshield/shared";
+import { haversineDistanceKm, getMagnitudeLabel, NZ_REGIONS, regionsForPoint } from "@quakeshield/shared";
 import { SCALE } from "@/types";
 import type { GeoNetQuake } from "@/types";
 
@@ -361,6 +361,9 @@ function SimulateEarthquakePanel({
       longitude: SCALE.toLatLng(city.lng),
       depth: BigInt(Math.round(depthNum)),
       publicId,
+      regionIds: regionsForPoint(city.lat, city.lng).map((r) =>
+        NZ_REGIONS.findIndex((region) => region.id === r.id),
+      ),
     })
       .then(() => {
         onSimulated({

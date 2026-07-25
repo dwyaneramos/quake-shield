@@ -1,12 +1,9 @@
 import { ethers, network } from "hardhat";
 // The canonical region table, shared with the frontend and oracle. Imported as
 // JSON because this script runs as CommonJS while @quakeshield/shared is ESM.
+// Only names are registered on-chain — boundary geometry lives entirely in the
+// shared package and the oracle, see QuakeShield.sol's Region struct note.
 import NZ_REGIONS from "../../shared/src/regions.json";
-
-/** Contract stores lat/lng scaled by 1e6 — see AGENTS.md conventions. */
-function toScaled(degrees: number): bigint {
-  return BigInt(Math.round(degrees * 1_000_000));
-}
 
 /** Seed capital for the reserve that pays investor returns (MockDNZD only). */
 const YIELD_RESERVE_SEED = ethers.parseUnits("50000", 6);
@@ -47,17 +44,12 @@ async function main() {
   const quakeshieldAddress = await quakeshield.getAddress();
   console.log("QuakeShield deployed to:", quakeshieldAddress);
 
-  // Register the investable regions. These must stay in sync with
-  // packages/shared/src/regions.ts, which the frontend and oracle read.
+  // Register the investable regions, in order — a region's on-chain ID is
+  // just its index here, and must stay in sync with packages/shared/src/regions.json,
+  // which the frontend and oracle read for boundary geometry.
   console.log(`\n--- Registering ${NZ_REGIONS.length} NZ regions ---`);
   for (const region of NZ_REGIONS) {
-    const tx = await quakeshield.addRegion(
-      region.name,
-      toScaled(region.south),
-      toScaled(region.north),
-      toScaled(region.west),
-      toScaled(region.east)
-    );
+    const tx = await quakeshield.addRegion(region.name);
     await tx.wait();
     console.log(`  ✓ ${region.name}`);
   }

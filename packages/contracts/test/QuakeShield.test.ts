@@ -25,41 +25,14 @@ describe("QuakeShield", function () {
 
   const FORTNIGHT = 14 * 24 * 60 * 60;
 
-  // Region boxes mirroring packages/shared/src/regions.ts, scaled by 1e6.
-  // Wellington and Canterbury are disjoint, so LAT/LNG_WELLINGTON only ever
-  // falls in region 0 and LAT/LNG_CHRISTCHURCH only in region 1.
-  const WELLINGTON_REGION = {
-    name: "Wellington",
-    south: -41700000,
-    north: -40700000,
-    west: 174600000,
-    east: 176300000,
-  };
-  const CANTERBURY_REGION = {
-    name: "Canterbury",
-    south: -45100000,
-    north: -42400000,
-    west: 171500000,
-    east: 174200000,
-  };
+  const WELLINGTON_REGION_NAME = "Wellington";
+  const CANTERBURY_REGION_NAME = "Canterbury";
   const WELLINGTON_REGION_ID = 0;
   const CANTERBURY_REGION_ID = 1;
 
   async function addTestRegions() {
-    await quakeshield.addRegion(
-      WELLINGTON_REGION.name,
-      WELLINGTON_REGION.south,
-      WELLINGTON_REGION.north,
-      WELLINGTON_REGION.west,
-      WELLINGTON_REGION.east,
-    );
-    await quakeshield.addRegion(
-      CANTERBURY_REGION.name,
-      CANTERBURY_REGION.south,
-      CANTERBURY_REGION.north,
-      CANTERBURY_REGION.west,
-      CANTERBURY_REGION.east,
-    );
+    await quakeshield.addRegion(WELLINGTON_REGION_NAME);
+    await quakeshield.addRegion(CANTERBURY_REGION_NAME);
   }
 
   async function buyWellingtonPolicy(
@@ -71,6 +44,31 @@ describe("QuakeShield", function () {
     return quakeshield
       .connect(buyer)
       .buyPolicy(coverage, MAGNITUDE_6_0, WELLINGTON_REGION_ID, recurring);
+  }
+
+  /**
+   * Mirrors what the oracle actually does: it computes which regions' real
+   * (off-chain) boundaries contain the epicenter and passes that list along —
+   * the contract no longer has geometry to work this out itself. Wellington
+   * and Canterbury's real boundaries are disjoint, so a Wellington epicenter
+   * only ever resolves to region 0 and a Christchurch one only to region 1.
+   */
+  function recordQuake(
+    magnitude: number,
+    lat: number,
+    lng: number,
+    publicId: string,
+    regionIds: number[],
+  ) {
+    return quakeshield
+      .connect(oracle)
+      .recordEarthquake(magnitude, lat, lng, 10, publicId, regionIds);
+  }
+
+  function recordWellingtonQuake(magnitude: number, publicId: string) {
+    return recordQuake(magnitude, LAT_WELLINGTON, LNG_WELLINGTON, publicId, [
+      WELLINGTON_REGION_ID,
+    ]);
   }
 
   beforeEach(async function () {
@@ -255,20 +253,19 @@ describe("QuakeShield", function () {
             LNG_WELLINGTON,
             10,
             "2024p001",
+            [WELLINGTON_REGION_ID],
           ),
       ).to.be.revertedWith("QuakeShield: caller is not the oracle");
     });
 
+    it("Should reject an unknown region ID from the oracle", async function () {
+      await expect(
+        recordQuake(MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON, "2024p098", [99]),
+      ).to.be.revertedWith("QuakeShield: unknown region");
+    });
+
     it("Should record earthquake event", async function () {
-      await quakeshield
-        .connect(oracle)
-        .recordEarthquake(
-          MAGNITUDE_6_0,
-          LAT_WELLINGTON,
-          LNG_WELLINGTON,
-          10,
-          "2024p001",
-        );
+      await recordWellingtonQuake(MAGNITUDE_6_0, "2024p001");
 
       const quake = await quakeshield.getQuake(0);
       expect(quake.magnitude).to.equal(MAGNITUDE_6_0);
@@ -278,17 +275,7 @@ describe("QuakeShield", function () {
     });
 
     it("Should emit QuakeRecorded event", async function () {
-      await expect(
-        quakeshield
-          .connect(oracle)
-          .recordEarthquake(
-            MAGNITUDE_6_0,
-            LAT_WELLINGTON,
-            LNG_WELLINGTON,
-            10,
-            "2024p001",
-          ),
-      )
+      await expect(recordWellingtonQuake(MAGNITUDE_6_0, "2024p001"))
         .to.emit(quakeshield, "QuakeRecorded")
         .withArgs(0, MAGNITUDE_6_0, LAT_WELLINGTON, LNG_WELLINGTON);
     });
@@ -296,15 +283,7 @@ describe("QuakeShield", function () {
     it("Should pay out if earthquake strikes the policy's region", async function () {
       const balanceBefore = await DNZD.balanceOf(user1.address);
 
-      await quakeshield
-        .connect(oracle)
-        .recordEarthquake(
-          MAGNITUDE_6_0,
-          LAT_WELLINGTON,
-          LNG_WELLINGTON,
-          10,
-          "2024p001",
-        );
+      await recordWellingtonQuake(MAGNITUDE_6_0, "2024p001");
 
       const balanceAfter = await DNZD.balanceOf(user1.address);
       expect(balanceAfter - balanceBefore).to.equal(COVERAGE_1000_DNZD);
@@ -320,15 +299,7 @@ describe("QuakeShield", function () {
         COVERAGE_1000_DNZD,
       );
 
-      await quakeshield
-        .connect(oracle)
-        .recordEarthquake(
-          MAGNITUDE_6_0,
-          LAT_WELLINGTON,
-          LNG_WELLINGTON,
-          10,
-          "2024p001",
-        );
+      await recordWellingtonQuake(MAGNITUDE_6_0, "2024p001");
 
       expect(await quakeshield.totalActiveCoverage()).to.equal(0);
     });
@@ -336,9 +307,7 @@ describe("QuakeShield", function () {
     it("Should not pay out if earthquake is below trigger magnitude", async function () {
       const balanceBefore = await DNZD.balanceOf(user1.address);
 
-      await quakeshield
-        .connect(oracle)
-        .recordEarthquake(500, LAT_WELLINGTON, LNG_WELLINGTON, 10, "2024p002");
+      await recordWellingtonQuake(500, "2024p002");
 
       const balanceAfter = await DNZD.balanceOf(user1.address);
       expect(balanceAfter).to.equal(balanceBefore);
@@ -350,15 +319,10 @@ describe("QuakeShield", function () {
     it("Should not pay out if earthquake is outside the policy's region", async function () {
       const balanceBefore = await DNZD.balanceOf(user1.address);
 
-      await quakeshield
-        .connect(oracle)
-        .recordEarthquake(
-          MAGNITUDE_7_0,
-          LAT_CHRISTCHURCH,
-          LNG_CHRISTCHURCH,
-          10,
-          "2024p003",
-        );
+      // Christchurch epicenter resolves only to the Canterbury region.
+      await recordQuake(MAGNITUDE_7_0, LAT_CHRISTCHURCH, LNG_CHRISTCHURCH, "2024p003", [
+        CANTERBURY_REGION_ID,
+      ]);
 
       const balanceAfter = await DNZD.balanceOf(user1.address);
       expect(balanceAfter).to.equal(balanceBefore);
@@ -372,7 +336,7 @@ describe("QuakeShield", function () {
     it("Should register regions with the right name and active flag", async function () {
       expect(await quakeshield.getRegionCount()).to.equal(2);
       const region = await quakeshield.getRegion(WELLINGTON_REGION_ID);
-      expect(region.name).to.equal(WELLINGTON_REGION.name);
+      expect(region.name).to.equal(WELLINGTON_REGION_NAME);
       expect(region.active).to.be.true;
     });
 
@@ -554,13 +518,7 @@ describe("QuakeShield", function () {
       const QuakeShield = await ethers.getContractFactory("QuakeShield");
       const miniShield = await QuakeShield.deploy(await DNZD.getAddress());
       await miniShield.setOracle(oracle.address);
-      await miniShield.addRegion(
-        WELLINGTON_REGION.name,
-        WELLINGTON_REGION.south,
-        WELLINGTON_REGION.north,
-        WELLINGTON_REGION.west,
-        WELLINGTON_REGION.east,
-      );
+      await miniShield.addRegion(WELLINGTON_REGION_NAME);
 
       const invested = ethers.parseUnits("200", 6);
       await DNZD.connect(user1).approve(
@@ -634,16 +592,8 @@ describe("QuakeShield", function () {
     });
 
     it("Should skip the period a qualifying quake lands in", async function () {
-      // Quake inside the Wellington box, no policy to trigger.
-      await quakeshield
-        .connect(oracle)
-        .recordEarthquake(
-          MAGNITUDE_6_0,
-          LAT_WELLINGTON,
-          LNG_WELLINGTON,
-          10,
-          "2024p010",
-        );
+      // Quake inside Wellington, no policy to trigger.
+      await recordWellingtonQuake(MAGNITUDE_6_0, "2024p010");
 
       await time.increase(FORTNIGHT);
 
@@ -659,15 +609,7 @@ describe("QuakeShield", function () {
     });
 
     it("Should resume paying the fortnight after a quake", async function () {
-      await quakeshield
-        .connect(oracle)
-        .recordEarthquake(
-          MAGNITUDE_6_0,
-          LAT_WELLINGTON,
-          LNG_WELLINGTON,
-          10,
-          "2024p011",
-        );
+      await recordWellingtonQuake(MAGNITUDE_6_0, "2024p011");
 
       await time.increase(FORTNIGHT * 2);
       await quakeshield.accrueRegion(0);
@@ -687,15 +629,7 @@ describe("QuakeShield", function () {
       await quakeshield.connect(user2).invest(1, INVEST_10000);
 
       // Quake in Wellington only.
-      await quakeshield
-        .connect(oracle)
-        .recordEarthquake(
-          MAGNITUDE_6_0,
-          LAT_WELLINGTON,
-          LNG_WELLINGTON,
-          10,
-          "2024p012",
-        );
+      await recordWellingtonQuake(MAGNITUDE_6_0, "2024p012");
 
       await time.increase(FORTNIGHT);
       await quakeshield.accrueAllRegions();
@@ -718,13 +652,7 @@ describe("QuakeShield", function () {
       // premiums paid in, so interest is capped at zero regardless of period.
       const QuakeShield = await ethers.getContractFactory("QuakeShield");
       const dryShield = await QuakeShield.deploy(await DNZD.getAddress());
-      await dryShield.addRegion(
-        WELLINGTON_REGION.name,
-        WELLINGTON_REGION.south,
-        WELLINGTON_REGION.north,
-        WELLINGTON_REGION.west,
-        WELLINGTON_REGION.east,
-      );
+      await dryShield.addRegion(WELLINGTON_REGION_NAME);
 
       await DNZD.connect(user2).approve(
         await dryShield.getAddress(),
@@ -775,17 +703,7 @@ describe("QuakeShield", function () {
     });
 
     it("Should charge a payout to the region the quake struck", async function () {
-      await expect(
-        quakeshield
-          .connect(oracle)
-          .recordEarthquake(
-            MAGNITUDE_6_0,
-            LAT_WELLINGTON,
-            LNG_WELLINGTON,
-            10,
-            "2024p020",
-          ),
-      )
+      await expect(recordWellingtonQuake(MAGNITUDE_6_0, "2024p020"))
         .to.emit(quakeshield, "InvestmentLoss")
         .withArgs(0, COVERAGE_1000_DNZD);
 
@@ -794,15 +712,7 @@ describe("QuakeShield", function () {
     });
 
     it("Should leave an untouched region's capital alone", async function () {
-      await quakeshield
-        .connect(oracle)
-        .recordEarthquake(
-          MAGNITUDE_6_0,
-          LAT_WELLINGTON,
-          LNG_WELLINGTON,
-          10,
-          "2024p021",
-        );
+      await recordWellingtonQuake(MAGNITUDE_6_0, "2024p021");
 
       const [, canterburyValue] = await quakeshield.getInvestment(1, user2.address);
       expect(canterburyValue).to.equal(INVEST_10000);

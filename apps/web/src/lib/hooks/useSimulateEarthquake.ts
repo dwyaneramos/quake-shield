@@ -14,6 +14,8 @@ export interface SimulateEarthquakeInput {
   longitude: bigint; // x1e6
   depth: bigint; // km
   publicId: string;
+  /** Regions whose real boundary (see @quakeshield/shared) contains this epicenter — usually 0 or 1. */
+  regionIds: number[];
 }
 
 /**
@@ -46,7 +48,14 @@ export function useSimulateEarthquake() {
           address: QUAKESHIELD_ADDRESS as `0x${string}`,
           abi: QUAKESHIELD_ABI,
           functionName: "recordEarthquake" as const,
-          args: [input.magnitude, input.latitude, input.longitude, input.depth, input.publicId] as const,
+          args: [
+            input.magnitude,
+            input.latitude,
+            input.longitude,
+            input.depth,
+            input.publicId,
+            input.regionIds.map((id) => BigInt(id)),
+          ] as const,
         };
         const gas = await estimateGasWithBuffer(publicClient, { ...params, account: address });
         const hash = await writeContractAsync({ ...params, gas });

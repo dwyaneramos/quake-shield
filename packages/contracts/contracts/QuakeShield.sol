@@ -55,17 +55,15 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     /**
      * @notice An investable New Zealand region.
-     * @dev Boundaries are an axis-aligned box in 1e6-scaled degrees — a
-     *      deliberate simplification of the real regional outlines, so that
-     *      the contract, the oracle and the UI all attribute a quake to the
-     *      same region without needing point-in-polygon maths on-chain.
+     * @dev Solidity can't cheaply do point-in-polygon, so the contract carries
+     *      no geometry at all — region boundaries live off-chain in
+     *      the shared regions package, and the oracle attests which regions a
+     *      quake's epicenter fell inside when it calls `recordEarthquake`
+     *      (see `regionIds` there). This is the same trust boundary the oracle
+     *      already sits on for the quake's magnitude and location.
      */
     struct Region {
         string name;
-        int256 south;              // Min latitude, scaled 1e6
-        int256 north;              // Max latitude, scaled 1e6
-        int256 west;               // Min longitude, scaled 1e6
-        int256 east;               // Max longitude, scaled 1e6
         uint256 totalAssets;       // DNZD backing this region (capital + interest - losses)
         uint256 totalShares;       // Investor shares outstanding for the current epoch
         uint256 epoch;             // Incremented if losses ever wipe the region out
@@ -231,32 +229,20 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     /**
      * @notice Register an investable region (only owner)
+     * @dev Boundary geometry isn't stored here — see the `Region` struct note.
+     *      `name` must be added in the exact order of the shared regions package's
+     *      `NZ_REGIONS`, since a region's on-chain ID is just its index here.
      * @param name Display name, e.g. "Canterbury"
-     * @param south Min latitude, scaled by 1e6
-     * @param north Max latitude, scaled by 1e6
-     * @param west Min longitude, scaled by 1e6
-     * @param east Max longitude, scaled by 1e6
      * @return regionId The new region's ID
      */
-    function addRegion(
-        string calldata name,
-        int256 south,
-        int256 north,
-        int256 west,
-        int256 east
-    ) external onlyOwner returns (uint256) {
+    function addRegion(string calldata name) external onlyOwner returns (uint256) {
         require(bytes(name).length > 0, "QuakeShield: region needs a name");
-        require(north > south && east > west, "QuakeShield: invalid region bounds");
 
         uint256 regionId = regions.length;
 
         regions.push(
             Region({
                 name: name,
-                south: south,
-                north: north,
-                west: west,
-                east: east,
                 totalAssets: 0,
                 totalShares: 0,
                 epoch: 0,
@@ -562,11 +548,16 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     /**
      * @notice Record an earthquake event (oracle only)
+     * @dev The contract has no boundary geometry to check `latitude`/`longitude`
+     *      against, so `regionIds` is the oracle's own computation of which
+     *      regions' real boundaries (from the shared regions package) the epicenter
+     *      falls inside — trusted the same way magnitude/lat/lng already are.
      * @param magnitude Earthquake magnitude (scaled by 100)
      * @param latitude Epicenter latitude (scaled by 1e6)
      * @param longitude Epicenter longitude (scaled by 1e6)
      * @param depth Depth in km
      * @param publicId GeoNet public ID
+     * @param regionIds Regions whose boundary contains the epicenter (usually 0 or 1)
      * @return quakeId The new quake event ID
      */
     function recordEarthquake(
@@ -574,8 +565,13 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         int256 latitude,
         int256 longitude,
         uint256 depth,
-        string calldata publicId
+        string calldata publicId,
+        uint256[] calldata regionIds
     ) external onlyOracle returns (uint256) {
+        for (uint256 i = 0; i < regionIds.length; i++) {
+            require(regionIds[i] < regions.length, "QuakeShield: unknown region");
+        }
+
         uint256 quakeId = recordedQuakes.length;
 
         recordedQuakes.push(
@@ -593,10 +589,10 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
         // Mark affected regions before paying claims: investors there forfeit
         // this period's return whether or not any policy happened to trigger.
-        _markRegionsHit(magnitude, latitude, longitude);
+        _markRegionsHit(magnitude, regionIds);
 
         // Process all active policies against this earthquake
-        _processClaims(magnitude, latitude, longitude);
+        _processClaims(magnitude, regionIds);
 
         return quakeId;
     }
@@ -845,30 +841,28 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         }
     }
 
-    /// @dev Inclusive on all four edges — mirrors `isInRegion` in the shared TS module.
-    function _isInRegion(Region storage region, int256 lat, int256 lng)
-        internal
-        view
-        returns (bool)
-    {
-        return lat >= region.south && lat <= region.north && lng >= region.west && lng <= region.east;
+    /// @dev Small, oracle-supplied list (usually 0-1 entries) — linear scan is cheapest here.
+    function _contains(uint256[] calldata regionIds, uint256 regionId) internal pure returns (bool) {
+        for (uint256 i = 0; i < regionIds.length; i++) {
+            if (regionIds[i] == regionId) return true;
+        }
+        return false;
     }
 
     /**
      * @notice Flag every region a significant quake landed in, ending their
      *         current earning period.
      */
-    function _markRegionsHit(uint256 magnitude, int256 lat, int256 lng) internal {
+    function _markRegionsHit(uint256 magnitude, uint256[] calldata regionIds) internal {
         if (magnitude < INVESTMENT_TRIGGER_MAGNITUDE) {
             return;
         }
 
-        for (uint256 i = 0; i < regions.length; i++) {
-            if (!_isInRegion(regions[i], lat, lng)) continue;
-
-            regions[i].lastQuakeAt = block.timestamp;
-            regions[i].quakeCount += 1;
-            emit RegionQuake(i, magnitude, block.timestamp);
+        for (uint256 i = 0; i < regionIds.length; i++) {
+            uint256 regionId = regionIds[i];
+            regions[regionId].lastQuakeAt = block.timestamp;
+            regions[regionId].quakeCount += 1;
+            emit RegionQuake(regionId, magnitude, block.timestamp);
         }
     }
 
@@ -879,13 +873,13 @@ contract QuakeShield is Ownable, ReentrancyGuard {
      *      the pool, then the yield reserve, and only then recorded as an
      *      uncovered shortfall.
      */
-    function _chargeLoss(uint256 amount, int256 lat, int256 lng) internal {
+    function _chargeLoss(uint256 amount, uint256[] calldata regionIds) internal {
         if (amount == 0) return;
 
-        uint256 remaining = _chargeRegions(amount, lat, lng, true);
+        uint256 remaining = _chargeRegions(amount, regionIds, true);
 
         if (remaining > 0) {
-            remaining = _chargeRegions(remaining, lat, lng, false);
+            remaining = _chargeRegions(remaining, regionIds, false);
         }
 
         if (remaining > 0 && yieldReserve > 0) {
@@ -902,19 +896,18 @@ contract QuakeShield is Ownable, ReentrancyGuard {
     /**
      * @notice Charge `amount` pro rata across regions, in proportion to what
      *         each currently holds.
-     * @param matching true to charge only the regions containing the epicenter,
-     *        false to charge only the regions that don't
+     * @param matching true to charge only the regions in `regionIds` (the epicenter's
+     *        regions), false to charge only the regions not in it
      * @return remaining The part of `amount` those regions couldn't cover
      */
     function _chargeRegions(
         uint256 amount,
-        int256 lat,
-        int256 lng,
+        uint256[] calldata regionIds,
         bool matching
     ) internal returns (uint256 remaining) {
         uint256 chargeable = 0;
         for (uint256 i = 0; i < regions.length; i++) {
-            if (_isInRegion(regions[i], lat, lng) != matching) continue;
+            if (_contains(regionIds, i) != matching) continue;
             chargeable += regions[i].totalAssets;
         }
 
@@ -928,7 +921,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < regions.length; i++) {
             Region storage region = regions[i];
             if (region.totalAssets == 0) continue;
-            if (_isInRegion(region, lat, lng) != matching) continue;
+            if (_contains(regionIds, i) != matching) continue;
 
             uint256 share = (toCharge * region.totalAssets) / chargeable;
             if (share == 0) continue;
@@ -944,7 +937,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
             for (uint256 i = 0; i < regions.length && dust > 0; i++) {
                 Region storage region = regions[i];
                 if (region.totalAssets == 0) continue;
-                if (_isInRegion(region, lat, lng) != matching) continue;
+                if (_contains(regionIds, i) != matching) continue;
 
                 uint256 take = dust > region.totalAssets ? region.totalAssets : dust;
                 _applyLoss(i, take);
@@ -990,22 +983,18 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     /**
      * @notice Process claims against an earthquake event
-     * @dev A policy triggers on exactly the same test that flags its region for
-     *      investors (`_isInRegion`) — the region a policyholder buys cover in is
-     *      the same region whose investors are on the hook for the payout.
+     * @dev A policy triggers on exactly the same oracle-attested `regionIds` that
+     *      flags its region for investors — the region a policyholder buys cover
+     *      in is the same region whose investors are on the hook for the payout.
      */
-    function _processClaims(
-        uint256 magnitude,
-        int256 quakeLat,
-        int256 quakeLng
-    ) internal {
+    function _processClaims(uint256 magnitude, uint256[] calldata regionIds) internal {
         for (uint256 i = 0; i < policyCounter; i++) {
             Policy storage p = policies[i];
 
             if (!p.isActive || p.hasPaidOut) continue;
             if (block.timestamp > p.periodEnd) continue;
             if (magnitude < p.triggerMagnitude) continue;
-            if (!_isInRegion(regions[p.regionId], quakeLat, quakeLng)) continue;
+            if (!_contains(regionIds, p.regionId)) continue;
 
             p.hasPaidOut = true;
             p.isActive = false;
@@ -1013,7 +1002,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
             totalActiveCoverage -= p.coverageAmount;
 
             // The capital backing this ground funds the payout.
-            _chargeLoss(p.coverageAmount, quakeLat, quakeLng);
+            _chargeLoss(p.coverageAmount, regionIds);
 
             DNZD.safeTransfer(p.policyholder, p.coverageAmount);
             emit PayoutExecuted(i, p.policyholder, p.coverageAmount, magnitude);

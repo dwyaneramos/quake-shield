@@ -1,18 +1,5 @@
+import { NZ_REGIONS, isInRegion } from "@quakeshield/shared";
 import type { GeoNetQuake } from "./geonet.js";
-
-/**
- * A region's boundaries as stored on-chain, unscaled back to degrees.
- * Read straight off the contract so the oracle can never disagree with it
- * about which ground belongs to which region.
- */
-export interface RegionBounds {
-  id: number;
-  name: string;
-  south: number;
-  north: number;
-  west: number;
-  east: number;
-}
 
 /** Quakes below this magnitude are too common to say anything about risk. */
 export const RISK_MIN_MAGNITUDE = 4;
@@ -22,11 +9,6 @@ export const RISK_MIN_MAGNITUDE = 4;
  * Reaching it pins the region to the contract's MAX_APR_BPS.
  */
 export const RISK_SATURATION = 100;
-
-/** Inclusive on all edges — mirrors QuakeShield's `_isInRegion`. */
-export function isInBounds(region: RegionBounds, lat: number, lng: number): boolean {
-  return lat >= region.south && lat <= region.north && lng >= region.west && lng <= region.east;
-}
 
 /**
  * How much a single quake contributes to a region's risk. Each whole
@@ -46,13 +28,16 @@ export function quakeWeight(magnitude: number): number {
  * Log-scaled against RISK_SATURATION: the difference between a silent region
  * and a lightly active one matters more than the difference between busy and
  * very busy, which is also how the return should feel to an investor.
+ *
+ * @param regionId Index into NZ_REGIONS, which is also the on-chain region ID.
  */
-export function computeRiskScoreBps(quakes: GeoNetQuake[], region: RegionBounds): number {
+export function computeRiskScoreBps(quakes: GeoNetQuake[], regionId: number): number {
+  const region = NZ_REGIONS[regionId];
   let weighted = 0;
 
   for (const quake of quakes) {
     if (quake.latitude === undefined || quake.longitude === undefined) continue;
-    if (!isInBounds(region, quake.latitude, quake.longitude)) continue;
+    if (!isInRegion(region, quake.latitude, quake.longitude)) continue;
     weighted += quakeWeight(quake.magnitude);
   }
 
@@ -63,12 +48,22 @@ export function computeRiskScoreBps(quakes: GeoNetQuake[], region: RegionBounds)
 }
 
 /** Count of qualifying quakes in a region, for logging and sanity checks. */
-export function countQuakesInRegion(quakes: GeoNetQuake[], region: RegionBounds): number {
+export function countQuakesInRegion(quakes: GeoNetQuake[], regionId: number): number {
+  const region = NZ_REGIONS[regionId];
   return quakes.filter(
     (quake) =>
       quake.magnitude >= RISK_MIN_MAGNITUDE &&
       quake.latitude !== undefined &&
       quake.longitude !== undefined &&
-      isInBounds(region, quake.latitude, quake.longitude)
+      isInRegion(region, quake.latitude, quake.longitude)
   ).length;
+}
+
+/** Every region ID (matching the on-chain registry) whose real boundary contains the point. */
+export function regionIdsForPoint(lat: number, lng: number): number[] {
+  const ids: number[] = [];
+  for (let i = 0; i < NZ_REGIONS.length; i++) {
+    if (isInRegion(NZ_REGIONS[i], lat, lng)) ids.push(i);
+  }
+  return ids;
 }

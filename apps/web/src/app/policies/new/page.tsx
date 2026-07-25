@@ -36,10 +36,10 @@ const RegionMap = dynamic(
 const MAX_COVERAGE_DNZD = 10_000;
 
 // Policies trigger on any GeoNet quake M5.0+ whose epicenter falls inside the
-// chosen region's box — the exact same test that governs that region's
-// investors, so a policy and the capital backing it always agree on what
-// counts as "this region got hit." Not user-configurable, so risk terms stay
-// consistent across the pool.
+// chosen region's real boundary — the exact same test that governs that
+// region's investors, so a policy and the capital backing it always agree on
+// what counts as "this region got hit." Not user-configurable, so risk terms
+// stay consistent across the pool.
 const TRIGGER_MAGNITUDE = 5.0;
 
 interface RegionOption {
@@ -532,9 +532,9 @@ function BuyPolicyForm() {
                   {regionMeta.name} boundary
                 </h2>
                 <p className="text-ink-500 text-sm mb-4">
-                  The highlighted box is exactly the area used to decide
-                  whether a quake struck this region — for policy payouts and
-                  investor returns alike.
+                  The highlighted area is the region's real boundary — exactly
+                  what's used to decide whether a quake struck this region,
+                  for policy payouts and investor returns alike.
                 </p>
                 <div className="rounded-lg overflow-hidden border border-ink-100">
                   <RegionMap

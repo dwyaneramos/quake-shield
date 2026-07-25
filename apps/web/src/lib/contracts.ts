@@ -652,26 +652,6 @@ export const QUAKESHIELD_ABI = [
         "internalType": "string",
         "name": "name",
         "type": "string"
-      },
-      {
-        "internalType": "int256",
-        "name": "south",
-        "type": "int256"
-      },
-      {
-        "internalType": "int256",
-        "name": "north",
-        "type": "int256"
-      },
-      {
-        "internalType": "int256",
-        "name": "west",
-        "type": "int256"
-      },
-      {
-        "internalType": "int256",
-        "name": "east",
-        "type": "int256"
       }
     ],
     "name": "addRegion",
@@ -1017,26 +997,6 @@ export const QUAKESHIELD_ABI = [
             "internalType": "string",
             "name": "name",
             "type": "string"
-          },
-          {
-            "internalType": "int256",
-            "name": "south",
-            "type": "int256"
-          },
-          {
-            "internalType": "int256",
-            "name": "north",
-            "type": "int256"
-          },
-          {
-            "internalType": "int256",
-            "name": "west",
-            "type": "int256"
-          },
-          {
-            "internalType": "int256",
-            "name": "east",
-            "type": "int256"
           },
           {
             "internalType": "uint256",
@@ -1435,6 +1395,11 @@ export const QUAKESHIELD_ABI = [
         "internalType": "string",
         "name": "publicId",
         "type": "string"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "regionIds",
+        "type": "uint256[]"
       }
     ],
     "name": "recordEarthquake",
@@ -1506,26 +1471,6 @@ export const QUAKESHIELD_ABI = [
         "internalType": "string",
         "name": "name",
         "type": "string"
-      },
-      {
-        "internalType": "int256",
-        "name": "south",
-        "type": "int256"
-      },
-      {
-        "internalType": "int256",
-        "name": "north",
-        "type": "int256"
-      },
-      {
-        "internalType": "int256",
-        "name": "west",
-        "type": "int256"
-      },
-      {
-        "internalType": "int256",
-        "name": "east",
-        "type": "int256"
       },
       {
         "internalType": "uint256",

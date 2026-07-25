@@ -1,18 +1,146 @@
 [
-  { "id": "northland", "name": "Northland", "island": "North Island", "south": -36.4, "north": -34.3, "west": 172.6, "east": 174.6 },
-  { "id": "auckland", "name": "Auckland", "island": "North Island", "south": -37.3, "north": -36.4, "west": 174.2, "east": 175.4 },
-  { "id": "waikato", "name": "Waikato", "island": "North Island", "south": -39.0, "north": -37.3, "west": 174.3, "east": 176.0 },
-  { "id": "bay-of-plenty", "name": "Bay of Plenty", "island": "North Island", "south": -38.5, "north": -37.2, "west": 176.0, "east": 177.2 },
-  { "id": "gisborne", "name": "Gisborne", "island": "North Island", "south": -39.0, "north": -37.4, "west": 177.2, "east": 178.7 },
-  { "id": "hawkes-bay", "name": "Hawke's Bay", "island": "North Island", "south": -40.4, "north": -38.8, "west": 176.5, "east": 178.1 },
-  { "id": "taranaki", "name": "Taranaki", "island": "North Island", "south": -39.8, "north": -38.6, "west": 173.7, "east": 174.8 },
-  { "id": "manawatu-whanganui", "name": "Manawatū-Whanganui", "island": "North Island", "south": -40.7, "north": -38.8, "west": 174.8, "east": 176.5 },
-  { "id": "wellington", "name": "Wellington", "island": "North Island", "south": -41.7, "north": -40.7, "west": 174.6, "east": 176.3 },
-  { "id": "tasman", "name": "Tasman", "island": "South Island", "south": -41.9, "north": -40.7, "west": 172.0, "east": 173.2 },
-  { "id": "nelson", "name": "Nelson", "island": "South Island", "south": -41.5, "north": -41.2, "west": 173.2, "east": 173.5 },
-  { "id": "marlborough", "name": "Marlborough", "island": "South Island", "south": -42.4, "north": -41.0, "west": 173.5, "east": 174.5 },
-  { "id": "west-coast", "name": "West Coast", "island": "South Island", "south": -44.5, "north": -41.9, "west": 168.3, "east": 171.5 },
-  { "id": "canterbury", "name": "Canterbury", "island": "South Island", "south": -45.1, "north": -42.4, "west": 171.5, "east": 174.2 },
-  { "id": "otago", "name": "Otago", "island": "South Island", "south": -46.7, "north": -44.4, "west": 169.4, "east": 171.5 },
-  { "id": "southland", "name": "Southland", "island": "South Island", "south": -47.4, "north": -44.5, "west": 166.3, "east": 169.4 }
+  {
+    "id": "northland",
+    "name": "Northland",
+    "island": "North Island",
+    "south": -36.5586,
+    "north": -34.1937,
+    "west": 172.3928,
+    "east": 174.9928
+  },
+  {
+    "id": "auckland",
+    "name": "Auckland",
+    "island": "North Island",
+    "south": -37.3645,
+    "north": -35.6992,
+    "west": 173.8963,
+    "east": 175.9032
+  },
+  {
+    "id": "waikato",
+    "name": "Waikato",
+    "island": "North Island",
+    "south": -39.3007,
+    "north": -36.2582,
+    "west": 174.3137,
+    "east": 176.5053
+  },
+  {
+    "id": "bay-of-plenty",
+    "name": "Bay of Plenty",
+    "island": "North Island",
+    "south": -39.0041,
+    "north": -36.8939,
+    "west": 175.7949,
+    "east": 178.1197
+  },
+  {
+    "id": "gisborne",
+    "name": "Gisborne",
+    "island": "North Island",
+    "south": -38.9749,
+    "north": -37.3354,
+    "west": 177.1222,
+    "east": 178.8358
+  },
+  {
+    "id": "hawkes-bay",
+    "name": "Hawke's Bay",
+    "island": "North Island",
+    "south": -40.4671,
+    "north": -38.5839,
+    "west": 176.0429,
+    "east": 178.2618
+  },
+  {
+    "id": "taranaki",
+    "name": "Taranaki",
+    "island": "North Island",
+    "south": -40.0678,
+    "north": -38.7016,
+    "west": 173.4925,
+    "east": 174.9918
+  },
+  {
+    "id": "manawatu-whanganui",
+    "name": "Manawatū-Whanganui",
+    "island": "North Island",
+    "south": -40.811,
+    "north": -38.4703,
+    "west": 174.6752,
+    "east": 176.8943
+  },
+  {
+    "id": "wellington",
+    "name": "Wellington",
+    "island": "North Island",
+    "south": -41.815,
+    "north": -40.6288,
+    "west": 174.388,
+    "east": 176.5646
+  },
+  {
+    "id": "tasman",
+    "name": "Tasman",
+    "island": "South Island",
+    "south": -42.3056,
+    "north": -40.2986,
+    "west": 172.0307,
+    "east": 173.3604
+  },
+  {
+    "id": "nelson",
+    "name": "Nelson",
+    "island": "South Island",
+    "south": -41.3934,
+    "north": -40.8049,
+    "west": 173.1764,
+    "east": 173.597
+  },
+  {
+    "id": "marlborough",
+    "name": "Marlborough",
+    "island": "South Island",
+    "south": -42.4881,
+    "north": -40.4608,
+    "west": 172.7185,
+    "east": 174.6035
+  },
+  {
+    "id": "west-coast",
+    "name": "West Coast",
+    "island": "South Island",
+    "south": -44.4968,
+    "north": -40.6283,
+    "west": 167.8388,
+    "east": 172.6917
+  },
+  {
+    "id": "canterbury",
+    "name": "Canterbury",
+    "island": "South Island",
+    "south": -45.0792,
+    "north": -41.9074,
+    "west": 169.5425,
+    "east": 174.239
+  },
+  {
+    "id": "otago",
+    "name": "Otago",
+    "island": "South Island",
+    "south": -46.8393,
+    "north": -43.9554,
+    "west": 168.1164,
+    "east": 171.4181
+  },
+  {
+    "id": "southland",
+    "name": "Southland",
+    "island": "South Island",
+    "south": -47.7236,
+    "north": -44.1264,
+    "west": 166.1386,
+    "east": 169.342
+  }
 ]

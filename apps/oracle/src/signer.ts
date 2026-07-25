@@ -1,22 +1,19 @@
 import { ethers } from "ethers";
 import { env } from "./config.js";
-import type { RegionBounds } from "./risk.js";
 
 const QUAKESHIELD_ABI = [
-  "function recordEarthquake(uint256 magnitude, int256 latitude, int256 longitude, uint256 depth, string publicId) returns (uint256)",
+  "function recordEarthquake(uint256 magnitude, int256 latitude, int256 longitude, uint256 depth, string publicId, uint256[] regionIds) returns (uint256)",
   "function getQuakeCount() view returns (uint256)",
   "function recordedQuakes(uint256) view returns (uint256 magnitude, int256 latitude, int256 longitude, uint256 depth, uint256 timestamp, string publicId)",
   "event QuakeRecorded(uint256 indexed quakeId, uint256 magnitude, int256 lat, int256 lng)",
 
-  // Regional investments
+  // Regional investments — boundary geometry isn't on-chain, see @quakeshield/shared
   "function getRegionCount() view returns (uint256)",
-  "function getRegion(uint256) view returns (tuple(string name, int256 south, int256 north, int256 west, int256 east, uint256 totalAssets, uint256 totalShares, uint256 epoch, uint256 riskScoreBps, uint256 riskUpdatedAt, uint256 lastAccrualAt, uint256 lastQuakeAt, uint256 quakeCount, uint256 totalInterestPaid, uint256 totalLosses, bool active))",
+  "function getRegion(uint256) view returns (tuple(string name, uint256 totalAssets, uint256 totalShares, uint256 epoch, uint256 riskScoreBps, uint256 riskUpdatedAt, uint256 lastAccrualAt, uint256 lastQuakeAt, uint256 quakeCount, uint256 totalInterestPaid, uint256 totalLosses, bool active))",
   "function setRegionRiskScores(uint256[] regionIds, uint256[] riskScoresBps)",
   "function accrueAllRegions() returns (uint256)",
   "function ACCRUAL_PERIOD() view returns (uint256)",
 ];
-
-const LATLNG_SCALE = 1_000_000;
 
 let provider: ethers.JsonRpcProvider;
 let wallet: ethers.Wallet;
@@ -44,13 +41,14 @@ export async function recordEarthquake(
   latitudeScaled: bigint,
   longitudeScaled: bigint,
   depth: bigint,
-  publicId: string
+  publicId: string,
+  regionIds: number[]
 ): Promise<ethers.TransactionReceipt | null> {
   try {
-    console.log(`[Blockchain] Recording earthquake: ${publicId}`);
+    console.log(`[Blockchain] Recording earthquake: ${publicId} (regions: ${regionIds.join(", ") || "none"})`);
 
     const tx = await quakeShieldContract.recordEarthquake(
-      magnitudeScaled, latitudeScaled, longitudeScaled, depth, publicId
+      magnitudeScaled, latitudeScaled, longitudeScaled, depth, publicId, regionIds
     );
 
     console.log(`[Blockchain] Transaction sent: ${tx.hash}`);
@@ -79,7 +77,9 @@ export async function isQuakeRecorded(publicId: string): Promise<boolean> {
 
 // ============ Regions ============
 
-export interface OnChainRegion extends RegionBounds {
+export interface OnChainRegion {
+  id: number;
+  name: string;
   riskScoreBps: number;
   lastAccrualAt: bigint;
   totalAssets: bigint;
@@ -87,9 +87,10 @@ export interface OnChainRegion extends RegionBounds {
 }
 
 /**
- * Read every registered region off the contract. The contract is the source of
- * truth for region boundaries — the oracle never carries its own copy, so the
- * two can't drift apart.
+ * Read every registered region off the contract. The contract has no
+ * boundary geometry of its own (see QuakeShield.sol's Region struct note) —
+ * that lives in @quakeshield/shared, keyed by this same positional `id`, per
+ * the fixed order both the deploy script and the shared package share.
  */
 export async function getRegions(): Promise<OnChainRegion[]> {
   const count = Number(await quakeShieldContract.getRegionCount());
@@ -100,10 +101,6 @@ export async function getRegions(): Promise<OnChainRegion[]> {
     regions.push({
       id: i,
       name: region.name,
-      south: Number(region.south) / LATLNG_SCALE,
-      north: Number(region.north) / LATLNG_SCALE,
-      west: Number(region.west) / LATLNG_SCALE,
-      east: Number(region.east) / LATLNG_SCALE,
       riskScoreBps: Number(region.riskScoreBps),
       lastAccrualAt: region.lastAccrualAt,
       totalAssets: region.totalAssets,

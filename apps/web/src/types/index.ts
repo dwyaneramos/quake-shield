@@ -51,14 +51,12 @@ export interface PoolStats {
   yieldReserve: bigint;
 }
 
-// An investable NZ region from the contract's region registry
+// An investable NZ region from the contract's region registry. Boundary
+// geometry isn't part of this — it lives in @quakeshield/shared, keyed by
+// the same `id` (index), and is used off-chain for real polygon matching.
 export interface Region {
   id: number;
   name: string;
-  south: bigint; // Scaled by 1e6
-  north: bigint;
-  west: bigint;
-  east: bigint;
   totalAssets: bigint;
   totalShares: bigint;
   epoch: bigint;
