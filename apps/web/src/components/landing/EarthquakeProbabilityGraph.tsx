@@ -45,9 +45,11 @@ function CustomTooltip({ active, payload, label }: any) {
 export default function EarthquakeProbabilityGraph({
   selectedCity,
   onCityChange,
+  minMagnitude,
 }: {
   selectedCity: string;
   onCityChange: (id: string) => void;
+  minMagnitude: number;
 }) {
   const router = useRouter();
 
@@ -55,11 +57,11 @@ export default function EarthquakeProbabilityGraph({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async (cityId: string) => {
+  const fetchData = useCallback(async (cityId: string, minMag: number) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/geonet/city?city=${cityId}`);
+      const res = await fetch(`/api/geonet/city?city=${cityId}&minMagnitude=${minMag}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const json = await res.json();
       setData(json);
@@ -71,10 +73,10 @@ export default function EarthquakeProbabilityGraph({
   }, []);
 
   useEffect(() => {
-    fetchData(selectedCity);
-    const interval = setInterval(() => fetchData(selectedCity), 60_000);
+    fetchData(selectedCity, minMagnitude);
+    const interval = setInterval(() => fetchData(selectedCity, minMagnitude), 60_000);
     return () => clearInterval(interval);
-  }, [selectedCity, fetchData]);
+  }, [selectedCity, minMagnitude, fetchData]);
 
   const city = NZ_CITIES.find((c) => c.id === selectedCity);
   const probability = data?.currentProbability ?? 0;
@@ -100,7 +102,7 @@ export default function EarthquakeProbabilityGraph({
         <div className="px-8 pt-8 pb-4 flex items-end gap-6">
           <div className="flex-1">
             <p className="text-ink-500 text-sm font-medium uppercase tracking-wider">
-              M5+ Earthquake Probability
+              M{minMagnitude.toFixed(1)}+ Earthquake Probability
             </p>
             {loading ? (
               <div className="mt-2 space-y-2">

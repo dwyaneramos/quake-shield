@@ -14,9 +14,13 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { isChainConfigured } from "@/lib/contracts";
+import { Header } from "@/components/layout/Header";
+import {  getContracts, isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
+import { useMarkets } from "@/lib/hooks/useMarkets";
+import { useBuyShares } from "@/lib/hooks/useBuyShares";
+import { previewBuy } from "@/lib/marketMath";
 import { getExplorerUrl } from "@/lib/chains";
 import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
 import { SCALE } from "@/types";
@@ -144,6 +148,160 @@ function CityMiniGraph({ cityId }: { cityId: string }) {
 
 let magnitudeDisplay = "6.0";
 
+/** Lets the buyer take a YES/NO position in the earthquake prediction market
+ * alongside their policy — a separate on-chain trade against the
+ * EarthquakeMarket AMM, priced live. */
+function MarketPositionCard() {
+  const chainId = useChainId();
+  const { EARTHQUAKE_MARKET_ADDRESS } = getContracts(chainId);
+  const marketsConfigured = Boolean(EARTHQUAKE_MARKET_ADDRESS);
+  const { markets, isLoading, refetch } = useMarkets();
+  const { buyShares, step, error, isPending, buyTxHash, reset } = useBuyShares();
+
+  const openMarkets = useMemo(() => markets.filter((m) => !m.resolved), [markets]);
+
+  const [marketId, setMarketId] = useState<string>("");
+  const [side, setSide] = useState<"yes" | "no">("yes");
+  const [amount, setAmount] = useState("10");
+
+  useEffect(() => {
+    if (!marketId && openMarkets.length > 0) setMarketId(openMarkets[0].id.toString());
+  }, [openMarkets, marketId]);
+
+  const market = openMarkets.find((m) => m.id.toString() === marketId);
+
+  if (!marketsConfigured) return null;
+
+  const amountIn = SCALE.toUSDC(Number(amount) || 0);
+  const previewShares = market ? previewBuy(market.yesReserve, market.noReserve, amountIn, side === "yes") : 0n;
+  const yesPct = market ? SCALE.fromOdds(market.yesPrice) * 100 : 0;
+  const noPct = 100 - yesPct;
+
+  const handleBuy = async () => {
+    if (!market || amountIn <= 0n) return;
+    await buyShares(market.id, side === "yes", amountIn)
+      .then(() => refetch())
+      .catch(() => {});
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6 mt-6">
+      <h2 className="text-lg font-bold text-ink-900 mb-1">Market Position</h2>
+      <p className="text-ink-500 text-sm mb-4">
+        Separately from your policy, bet YES or NO on whether the earthquake happens — a one-off trade,
+        priced by the live market.
+      </p>
+
+      {isLoading ? (
+        <p className="text-sm text-ink-500">Loading markets…</p>
+      ) : openMarkets.length === 0 ? (
+        <p className="text-sm text-ink-500">No open markets on this network yet.</p>
+      ) : step === "done" ? (
+        <div>
+          <p className="text-sm text-shield-700 mb-1">
+            {side.toUpperCase()} position bought — {SCALE.fromUSDC(previewShares).toLocaleString(undefined, {
+              maximumFractionDigits: 4,
+            })}{" "}
+            shares.
+          </p>
+          {buyTxHash && (
+            <a
+              href={`${getExplorerUrl(chainId)}/tx/${buyTxHash}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-medium text-shield-600 hover:text-shield-700"
+            >
+              View transaction →
+            </a>
+          )}
+          <button onClick={reset} type="button" className="text-xs text-ink-400 hover:text-ink-600 block mt-2">
+            Take another position
+          </button>
+        </div>
+      ) : (
+        <>
+          {openMarkets.length > 1 && (
+            <select
+              value={marketId}
+              onChange={(e) => setMarketId(e.target.value)}
+              className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+            >
+              {openMarkets.map((m) => (
+                <option key={m.id.toString()} value={m.id.toString()}>
+                  {m.description}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {market && (
+            <>
+              <div className="mb-3">
+                <div className="flex h-2 rounded-full overflow-hidden bg-ink-100">
+                  <div className="bg-shield-500" style={{ width: `${yesPct}%` }} />
+                  <div className="bg-quake-400" style={{ width: `${noPct}%` }} />
+                </div>
+                <div className="flex justify-between text-xs font-medium mt-1">
+                  <span className="text-shield-700">YES {yesPct.toFixed(0)}%</span>
+                  <span className="text-quake-700">NO {noPct.toFixed(0)}%</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setSide("yes")}
+                  className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${
+                    side === "yes" ? "bg-shield-600 text-white" : "bg-ink-100 text-ink-600"
+                  }`}
+                >
+                  Buy YES (will happen)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSide("no")}
+                  className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-colors ${
+                    side === "no" ? "bg-quake-500 text-white" : "bg-ink-100 text-ink-600"
+                  }`}
+                >
+                  Buy NO (won&rsquo;t happen)
+                </button>
+              </div>
+
+              <label className="block text-xs font-medium text-ink-500 mb-1">Amount (USDC)</label>
+              <input
+                type="number"
+                min={0}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+              />
+
+              <div className="bg-ink-50 rounded-lg p-3 border border-ink-100 text-sm mb-3 flex justify-between">
+                <span className="text-ink-500">Current payout you may get</span>
+                <span className="font-semibold text-shield-700">
+                  {SCALE.fromUSDC(previewShares).toLocaleString(undefined, { maximumFractionDigits: 4 })} USDC
+                </span>
+              </div>
+
+              {error && <p className="text-xs text-quake-700 mb-2">{error}</p>}
+
+              <button
+                type="button"
+                onClick={handleBuy}
+                disabled={isPending || amountIn <= 0n}
+                className="w-full bg-shield-600 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-shield-700 transition-colors disabled:opacity-50"
+              >
+                {step === "approving" ? "Approving…" : step === "buying" ? "Buying…" : `Buy ${side.toUpperCase()} (one-off)`}
+              </button>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function BuyPolicyForm() {
   const searchParams = useSearchParams();
   const initialCity = searchParams.get("city");
@@ -161,6 +319,7 @@ function BuyPolicyForm() {
   const { buyPolicy, step, error, isPending, buyTxHash, reset } = useBuyPolicy();
   const { stats } = usePoolStats();
 
+  const [paymentPlan, setPaymentPlan] = useState<"onetime" | "recurring">("onetime");
   const [regionIndex, setRegionIndex] = useState(initialIndex);
   const [customLat, setCustomLat] = useState("-41.2865");
   const [customLng, setCustomLng] = useState("174.7762");
@@ -333,6 +492,36 @@ function BuyPolicyForm() {
                 )}
               </div>
 
+            {/* Payment Plan */}
+            <div>
+              <label className="block text-sm font-medium text-ink-700 mb-2">Payment Plan</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentPlan("onetime")}
+                  className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
+                    paymentPlan === "onetime" ? "bg-shield-600 text-white" : "bg-ink-100 text-ink-600"
+                  }`}
+                >
+                  One-off
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentPlan("recurring")}
+                  className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
+                    paymentPlan === "recurring" ? "bg-shield-600 text-white" : "bg-ink-100 text-ink-600"
+                  }`}
+                >
+                  Recurring
+                </button>
+              </div>
+              <p className="text-xs text-ink-500 mt-1">
+                {paymentPlan === "onetime"
+                  ? "Pay the premium once for this coverage period."
+                  : "Premium is paid each coverage period — come back to renew, or approve ahead of time."}
+              </p>
+            </div>
+
             {/* Radius */}
             <div>
               <label className="block text-sm font-medium text-ink-700 mb-1.5">Radius (km)</label>
@@ -383,7 +572,13 @@ function BuyPolicyForm() {
               }}
               className="w-full bg-shield-600 text-white py-3 rounded-lg font-semibold hover:bg-shield-700 transition-colors"
             >
-              {step === "approving" ? "Approving USDC…" : step === "buying" ? "Buying policy…" : "Buy Policy"}
+              {step === "approving"
+                ? "Approving USDC…"
+                : step === "buying"
+                ? "Buying policy…"
+                : paymentPlan === "recurring"
+                ? "Subscribe to Policy"
+                : "Buy Policy"}
             </button>
           </form>
         </div>
@@ -397,6 +592,7 @@ function BuyPolicyForm() {
             <p className="text-ink-500 text-sm">Live seismic data for this area</p>
           </div>
             <CityMiniGraph cityId={selectedCityId} />
+            <MarketPositionCard />
           </div>
           </div>
         )}

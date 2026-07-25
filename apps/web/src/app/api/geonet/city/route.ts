@@ -19,9 +19,19 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function calculateProbability(quakeCount: number, maxMag: number, avgDepth: number): number {
+function calculateProbability(
+  quakeCount: number,
+  maxMag: number,
+  avgDepth: number,
+  minMagnitude: number
+): number {
   const freqScore = quakeCount > 0 ? Math.log10(quakeCount + 1) * 0.15 : 0;
-  const magScore = maxMag >= 5 ? (maxMag - 4) * 0.3 : maxMag >= 3 ? 0.01 * maxMag : 0;
+  const magScore =
+    maxMag >= minMagnitude
+      ? (maxMag - (minMagnitude - 1)) * 0.3
+      : maxMag >= minMagnitude - 2
+        ? 0.01 * maxMag
+        : 0;
   const depthBonus = avgDepth < 30 ? 0.05 : 0;
   return freqScore + magScore + depthBonus;
 }
@@ -29,6 +39,7 @@ function calculateProbability(quakeCount: number, maxMag: number, avgDepth: numb
 function buildTrendData(
   quakes: any[],
   city: NZCity,
+  minMagnitude: number,
   bucketCount = 12
 ): TrendPoint[] {
   const now = Date.now();
@@ -60,7 +71,7 @@ function buildTrendData(
     const maxMag = count > 0 ? Math.max(...bucketQuakes.map((q: any) => q.magnitude)) : 0;
     const avgDepth = count > 0 ? bucketQuakes.reduce((s: number, q: any) => s + q.depth, 0) / count : 100;
 
-    const raw = calculateProbability(count, maxMag, avgDepth);
+    const raw = calculateProbability(count, maxMag, avgDepth, minMagnitude);
     runningProb = runningProb * 0.7 + raw * 0.3;
     const probability = Math.round(Math.max(0.0001, Math.min(runningProb, 5)) * 10000) / 10000;
 
@@ -76,8 +87,8 @@ function buildTrendData(
   return points;
 }
 
-function buildCityResponse(quakes: any[], city: NZCity) {
-  const trend = buildTrendData(quakes, city);
+function buildCityResponse(quakes: any[], city: NZCity, minMagnitude: number) {
+  const trend = buildTrendData(quakes, city, minMagnitude);
 
   const nearby = quakes.filter((q: any) => {
     if (q.latitude == null || q.longitude == null) return false;
@@ -97,6 +108,7 @@ function buildCityResponse(quakes: any[], city: NZCity) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const cityId = searchParams.get("city") ?? "wellington";
+  const minMagnitude = Number(searchParams.get("minMagnitude") ?? 5);
 
   const city = getCityById(cityId);
   if (!city) {
@@ -108,7 +120,21 @@ export async function GET(request: Request) {
   try {
     const quakes = await fetchRecentQuakes(1);
     const result = buildCityResponse(quakes, city);
-    return NextResponse.json(result, { headers });
+    const trend = buildTrendData(quakes, city, minMagnitude);
+
+    const nearby = quakes.filter((q: any) => {
+      if (q.latitude == null || q.longitude == null) return false;
+      return haversineDistance(city.lat, city.lng, q.latitude, q.longitude) <= CITY_RADIUS_KM;
+    });
+
+    const currentProbability = trend.length > 0 ? trend[trend.length - 1].probability : 2;
+
+    return NextResponse.json({
+      city,
+      currentProbability,
+      recentQuakeCount: nearby.length,
+      trend,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to fetch data" },
