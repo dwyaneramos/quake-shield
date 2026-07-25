@@ -2,10 +2,11 @@
   "name": "quakeshield",
   "private": true,
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "turbo run dev dev:fuji",
     "build": "turbo build",
     "test": "turbo test",
     "oracle": "pnpm --filter oracle dev",
+    "oracle:fuji": "pnpm --filter oracle dev:fuji",
     "deploy:contracts": "pnpm --filter contracts deploy",
     "lint": "turbo lint",
     "clean": "turbo clean"

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:fuji": "NETWORK=fuji tsx watch src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc",
     "clean": "rm -rf dist"
