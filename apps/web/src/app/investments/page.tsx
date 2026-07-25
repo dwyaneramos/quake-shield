@@ -8,7 +8,7 @@ import { isChainConfigured } from "@/lib/contracts";
 import { useRegions, useMyInvestments } from "@/lib/hooks/useInvestments";
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
 import { NZ_REGIONS } from "@quakeshield/shared";
-import { SCALE } from "@/types";
+import { SCALE, formatDNZD } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 function riskLabel(aprBps: bigint): { label: string; className: string } {
@@ -61,13 +61,13 @@ export default function InvestmentsPage() {
         <div className="grid sm:grid-cols-3 gap-4 mt-8 max-w-3xl">
           <div className="bg-ink-50 rounded-xl p-4">
             <div className="text-2xl font-bold text-ink-900">
-              {stats ? `${SCALE.fromDNZD(stats.totalInvested).toLocaleString()}` : "--"}
+              {stats ? formatDNZD(stats.totalInvested) : "--"}
             </div>
             <div className="text-sm text-ink-500 mt-1">DNZD invested pool-wide</div>
           </div>
           <div className="bg-ink-50 rounded-xl p-4">
             <div className="text-2xl font-bold text-ink-900">
-              {stats ? `${SCALE.fromDNZD(stats.yieldReserve).toLocaleString()}` : "--"}
+              {stats ? formatDNZD(stats.yieldReserve) : "--"}
             </div>
             <div className="text-sm text-ink-500 mt-1">DNZD yield reserve</div>
           </div>
@@ -127,13 +127,13 @@ export default function InvestmentsPage() {
                       Paid fortnightly if no qualifying quake strikes
                     </p>
 
-                    <div className="flex justify-between text-sm border-t border-ink-100 pt-3">
-                      <span className="text-ink-500">
-                        {SCALE.fromDNZD(region.totalAssets).toLocaleString()} DNZD invested
+                    <div className="flex justify-between text-sm border-t border-ink-100 pt-3 gap-2 min-w-0">
+                      <span className="text-ink-500 truncate">
+                        {formatDNZD(region.totalAssets)} DNZD invested
                       </span>
                       {position && (
-                        <span className="font-semibold text-shield-700">
-                          You: {SCALE.fromDNZD(position.value).toLocaleString()}
+                        <span className="font-semibold text-shield-700 truncate shrink-0">
+                          You: {formatDNZD(position.value)}
                         </span>
                       )}
                     </div>

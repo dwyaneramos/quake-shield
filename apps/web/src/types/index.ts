@@ -145,3 +145,25 @@ export const SCALE = {
    */
   fromBps: (scaled: bigint): number => Number(scaled) / 100,
 };
+
+/** Above this many integer digits, `Number(bigint)` has already lost precision. */
+const MAX_SAFE_DNZD_DIGITS = 15;
+
+/**
+ * Format a scaled DNZD amount for display, the same way `SCALE.fromDNZD(x).toLocaleString()`
+ * always has — except values beyond what a double can represent exactly (e.g. a
+ * `type(uint256).max` sentinel leaking through from a contract) are formatted straight
+ * from the bigint and truncated with an ellipsis instead of rendering 60+ garbled digits.
+ */
+export function formatDNZD(scaled: bigint): string {
+  const whole = scaled < 0n ? -scaled : scaled;
+  const sign = scaled < 0n ? "-" : "";
+  const digits = (whole / 1_000_000n).toString().length;
+
+  if (digits > MAX_SAFE_DNZD_DIGITS) {
+    const wholeStr = (whole / 1_000_000n).toLocaleString("en-US");
+    return `${sign}${wholeStr.slice(0, MAX_SAFE_DNZD_DIGITS)}…`;
+  }
+
+  return `${sign}${SCALE.fromDNZD(whole).toLocaleString()}`;
+}

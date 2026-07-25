@@ -10,7 +10,7 @@ import { useRenewPolicy } from "@/lib/hooks/useRenewPolicy";
 import { getContracts } from "@/lib/contracts";
 import { getExplorerUrl } from "@/lib/chains";
 import { NZ_REGIONS } from "@quakeshield/shared";
-import { SCALE } from "@/types";
+import { SCALE, formatDNZD } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 type Tab = "policies" | "claims";
@@ -227,8 +227,8 @@ export default function PoliciesPage() {
                     <div className="divide-y divide-ink-100">
                       {filtered.map((policy) => {
                         const magnitude = SCALE.fromMagnitude(policy.triggerMagnitude);
-                        const coverage = SCALE.fromDNZD(policy.coverageAmount);
-                        const premium = SCALE.fromDNZD(policy.premiumPaid);
+                        const coverage = formatDNZD(policy.coverageAmount);
+                        const premium = formatDNZD(policy.premiumPaid);
                         const regionName =
                           NZ_REGIONS[Number(policy.regionId)]?.name ?? "Unknown region";
                         const status = policy.hasPaidOut
@@ -291,10 +291,10 @@ export default function PoliciesPage() {
 
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1 text-sm text-ink-500">
                                   <span>
-                                    Coverage: <strong className="text-ink-700">{coverage.toLocaleString()} DNZD</strong>
+                                    Coverage: <strong className="text-ink-700">{coverage} DNZD</strong>
                                   </span>
                                   <span>
-                                    Premium: <strong className="text-ink-700">{premium.toLocaleString()} DNZD</strong>
+                                    Premium: <strong className="text-ink-700">{premium} DNZD</strong>
                                   </span>
                                   <span>
                                     Region: <strong className="text-ink-700">{regionName}</strong>
@@ -382,8 +382,8 @@ export default function PoliciesPage() {
                             M{magnitude.toFixed(1)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-ink-900">
-                              {SCALE.fromDNZD(claim.amount).toLocaleString()} DNZD paid out
+                            <p className="font-medium text-ink-900 truncate">
+                              {formatDNZD(claim.amount)} DNZD paid out
                             </p>
                             <p className="text-sm text-ink-500">
                               {getMagnitudeLabel(magnitude)} quake · Policy #{claim.policyId.toString()} · Block{" "}

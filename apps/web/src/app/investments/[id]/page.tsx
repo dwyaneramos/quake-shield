@@ -18,7 +18,7 @@ import {
   useAccrueRegion,
 } from "@/lib/hooks/useInvestments";
 import { NZ_REGIONS } from "@quakeshield/shared";
-import { SCALE } from "@/types";
+import { SCALE, formatDNZD } from "@/types";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 const RegionActivityChart = dynamic(
@@ -178,7 +178,7 @@ export default function RegionInvestmentPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <Stat
                   label="Invested"
-                  value={region ? `${SCALE.fromDNZD(region.totalAssets).toLocaleString()} DNZD` : "--"}
+                  value={region ? `${formatDNZD(region.totalAssets)} DNZD` : "--"}
                   isLoading={regionLoading}
                 />
                 <Stat
@@ -188,12 +188,12 @@ export default function RegionInvestmentPage() {
                 />
                 <Stat
                   label="Interest paid"
-                  value={region ? `${SCALE.fromDNZD(region.totalInterestPaid).toLocaleString()} DNZD` : "--"}
+                  value={region ? `${formatDNZD(region.totalInterestPaid)} DNZD` : "--"}
                   isLoading={regionLoading}
                 />
                 <Stat
                   label="Losses paid"
-                  value={region ? `${SCALE.fromDNZD(region.totalLosses).toLocaleString()} DNZD` : "--"}
+                  value={region ? `${formatDNZD(region.totalLosses)} DNZD` : "--"}
                   isLoading={regionLoading}
                 />
               </div>
@@ -245,7 +245,7 @@ export default function RegionInvestmentPage() {
                   </p>
                   {periodsDue > 0n && (
                     <p className="text-ink-500">
-                      Would credit ~{SCALE.fromDNZD(pendingInterest).toLocaleString()} DNZD to the region
+                      Would credit ~{formatDNZD(pendingInterest)} DNZD to the region
                     </p>
                   )}
                 </div>
@@ -274,13 +274,13 @@ export default function RegionInvestmentPage() {
                 {/* My position */}
                 <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6">
                   <h2 className="text-lg font-bold text-ink-900 mb-4">Your Position</h2>
-                  <div className="flex justify-between items-center p-4 bg-ink-50 rounded-lg mb-3">
-                    <span className="text-ink-600 text-sm">Current value</span>
+                  <div className="flex justify-between items-center gap-2 p-4 bg-ink-50 rounded-lg mb-3 min-w-0">
+                    <span className="text-ink-600 text-sm shrink-0">Current value</span>
                     {positionLoading ? (
                       <Skeleton className="h-5 w-20" />
                     ) : (
-                      <span className="font-bold text-ink-900">
-                        {position ? `${SCALE.fromDNZD(position.value).toLocaleString()} DNZD` : "0 DNZD"}
+                      <span className="font-bold text-ink-900 truncate" title={position ? `${formatDNZD(position.value)} DNZD` : undefined}>
+                        {position ? `${formatDNZD(position.value)} DNZD` : "0 DNZD"}
                       </span>
                     )}
                   </div>
@@ -338,8 +338,8 @@ export default function RegionInvestmentPage() {
                 {/* Invest form */}
                 <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6">
                   <h2 className="text-lg font-bold text-ink-900 mb-1">Invest</h2>
-                  <p className="text-ink-500 text-sm mb-4">
-                    Wallet balance: {SCALE.fromDNZD(walletBalance).toLocaleString()} DNZD
+                  <p className="text-ink-500 text-sm mb-4 truncate" title={`Wallet balance: ${formatDNZD(walletBalance)} DNZD`}>
+                    Wallet balance: {formatDNZD(walletBalance)} DNZD
                   </p>
 
                   {investStep === "done" ? (
@@ -406,8 +406,8 @@ export default function RegionInvestmentPage() {
 
 function Stat({ label, value, isLoading }: { label: string; value: string; isLoading?: boolean }) {
   return (
-    <div>
-      {isLoading ? <Skeleton className="h-6 w-16 mb-1" /> : <div className="text-lg font-bold text-ink-900">{value}</div>}
+    <div className="min-w-0">
+      {isLoading ? <Skeleton className="h-6 w-16 mb-1" /> : <div className="text-lg font-bold text-ink-900 truncate" title={value}>{value}</div>}
       <div className="text-xs text-ink-500">{label}</div>
     </div>
   );

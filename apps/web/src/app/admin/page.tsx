@@ -10,7 +10,7 @@ import { usePoolStats } from "@/lib/hooks/useQuakeShield";
 import { isChainConfigured, getContracts } from "@/lib/contracts";
 import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
 import { NZ_REGIONS, regionsForPoint } from "@quakeshield/shared";
-import { SCALE } from "@/types";
+import { SCALE, formatDNZD } from "@/types";
 import { getExplorerUrl } from "@/lib/chains";
 import type L from "leaflet";
 
@@ -198,16 +198,16 @@ export default function AdminPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard
                   label="Pool Balance"
-                  value={`$${SCALE.fromDNZD(stats.balance).toLocaleString()}`}
+                  value={`$${formatDNZD(stats.balance)}`}
                   accent
                 />
                 <StatCard
                   label="Total Premiums"
-                  value={`$${SCALE.fromDNZD(stats.totalPremiums).toLocaleString()}`}
+                  value={`$${formatDNZD(stats.totalPremiums)}`}
                 />
                 <StatCard
                   label="Total Payouts"
-                  value={`$${SCALE.fromDNZD(stats.totalPayouts).toLocaleString()}`}
+                  value={`$${formatDNZD(stats.totalPayouts)}`}
                 />
                 <StatCard
                   label="Active Policies"
@@ -215,7 +215,7 @@ export default function AdminPage() {
                 />
                 <StatCard
                   label="Active Coverage"
-                  value={`$${SCALE.fromDNZD(stats.totalActiveCoverage).toLocaleString()}`}
+                  value={`$${formatDNZD(stats.totalActiveCoverage)}`}
                 />
                 <StatCard
                   label="Reserve Ratio"
@@ -234,7 +234,7 @@ export default function AdminPage() {
                 />
                 <StatCard
                   label="Profit/Loss"
-                  value={`$${SCALE.fromDNZD(stats.totalPremiums - stats.totalPayouts).toLocaleString()}`}
+                  value={`$${formatDNZD(stats.totalPremiums - stats.totalPayouts)}`}
                   highlight={
                     stats.totalPremiums > stats.totalPayouts ? "green" : "red"
                   }
@@ -589,8 +589,8 @@ function StatCard({
       : "text-ink-900";
 
   return (
-    <div className="bg-ink-50 rounded-xl p-4">
-      <div className={`text-xl font-bold ${colorClass}`}>{value}</div>
+    <div className="bg-ink-50 rounded-xl p-4 min-w-0">
+      <div className={`text-xl font-bold truncate ${colorClass}`} title={value}>{value}</div>
       <div className="text-xs text-ink-500 mt-1 uppercase tracking-wide">
         {label}
       </div>

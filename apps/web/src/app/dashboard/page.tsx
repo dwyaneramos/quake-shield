@@ -22,7 +22,7 @@ import { ConnectButton } from "@/components/web3/ConnectButton";
 import { isChainConfigured } from "@/lib/contracts";
 import { usePoolStats, useUserPolicies } from "@/lib/hooks/useQuakeShield";
 import { NZ_REGIONS } from "@quakeshield/shared";
-import { SCALE } from "@/types";
+import { SCALE, formatDNZD } from "@/types";
 import HomeClient from "@/components/landing/HomeClient";
 import DashboardQuakeFeed from "@/components/quakes/DashboardQuakeFeed";
 import MagnitudeSlider from "@/components/landing/MagnitudeSlider";
@@ -166,13 +166,9 @@ export default function DashboardPage() {
                             </p>
                             <p className="text-sm text-ink-500">
                               Coverage{" "}
-                              {SCALE.fromDNZD(
-                                policy.coverageAmount,
-                              ).toLocaleString()}{" "}
+                              {formatDNZD(policy.coverageAmount)}{" "}
                               DNZD · Premium{" "}
-                              {SCALE.fromDNZD(
-                                policy.premiumPaid,
-                              ).toLocaleString()}{" "}
+                              {formatDNZD(policy.premiumPaid)}{" "}
                               DNZD
                             </p>
                           </div>
@@ -210,7 +206,7 @@ export default function DashboardPage() {
                 label="Pool Balance"
                 value={
                   stats
-                    ? `${SCALE.fromDNZD(stats.balance).toLocaleString()} DNZD`
+                    ? `${formatDNZD(stats.balance)} DNZD`
                     : "--"
                 }
                 isLoading={statsLoading}
@@ -219,9 +215,7 @@ export default function DashboardPage() {
                 label="Active Coverage"
                 value={
                   stats
-                    ? `${SCALE.fromDNZD(
-                        stats.totalActiveCoverage,
-                      ).toLocaleString()} DNZD`
+                    ? `${formatDNZD(stats.totalActiveCoverage)} DNZD`
                     : "--"
                 }
                 isLoading={statsLoading}
@@ -235,9 +229,7 @@ export default function DashboardPage() {
                 label="Total Premiums"
                 value={
                   stats
-                    ? `${SCALE.fromDNZD(
-                        stats.totalPremiums,
-                      ).toLocaleString()} DNZD`
+                    ? `${formatDNZD(stats.totalPremiums)} DNZD`
                     : "--"
                 }
                 isLoading={statsLoading}
@@ -246,9 +238,7 @@ export default function DashboardPage() {
                 label="Total Payouts"
                 value={
                   stats
-                    ? `${SCALE.fromDNZD(
-                        stats.totalPayouts,
-                      ).toLocaleString()} DNZD`
+                    ? `${formatDNZD(stats.totalPayouts)} DNZD`
                     : "--"
                 }
                 isLoading={statsLoading}
@@ -399,11 +389,11 @@ function StatCard({
   isLoading?: boolean;
 }) {
   return (
-    <div className="text-center p-4 bg-ink-50 rounded-lg">
+    <div className="text-center p-4 bg-ink-50 rounded-lg min-w-0">
       {isLoading ? (
         <Skeleton className="h-8 w-20 mx-auto" />
       ) : (
-        <div className="text-2xl font-bold text-ink-900">{value}</div>
+        <div className="text-2xl font-bold text-ink-900 truncate" title={value}>{value}</div>
       )}
       <div className="text-sm text-ink-600 mt-1">{label}</div>
     </div>
