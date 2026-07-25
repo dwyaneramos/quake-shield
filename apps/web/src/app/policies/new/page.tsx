@@ -7,8 +7,11 @@ import { ConnectButton } from "@/components/web3/ConnectButton";
 import { Header } from "@/components/layout/Header";
 import { CONTRACTS_CONFIGURED } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
+import { usePoolStats } from "@/lib/hooks/useQuakeShield";
 import { POLYGON_AMOY } from "@/lib/polygon";
 import { SCALE } from "@/types";
+
+const MAX_COVERAGE_USDC = 10_000;
 
 const NZ_REGIONS = [
   { label: "Wellington", lat: -41.2865, lng: 174.7762 },
@@ -23,6 +26,7 @@ const NZ_REGIONS = [
 export default function BuyPolicyPage() {
   const { isConnected } = useAccount();
   const { buyPolicy, step, error, isPending, buyTxHash, reset } = useBuyPolicy();
+  const { stats } = usePoolStats();
 
   const [regionIndex, setRegionIndex] = useState(0);
   const [customLat, setCustomLat] = useState("-41.2865");
@@ -43,6 +47,7 @@ export default function BuyPolicyPage() {
 
   const validation = useMemo(() => {
     if (coverageNum <= 0) return "Coverage must be greater than 0";
+    if (coverageNum > MAX_COVERAGE_USDC) return `Maximum coverage is ${MAX_COVERAGE_USDC.toLocaleString()} USDC`;
     if (magnitudeNum < 4.0) return "Minimum trigger magnitude is 4.0";
     if (radiusNum <= 0 || radiusNum > 500) return "Radius must be between 1 and 500km";
     if (!lat || !lng || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng))) return "Enter a valid latitude/longitude";
@@ -126,11 +131,19 @@ export default function BuyPolicyPage() {
                 <input
                   type="number"
                   min={0}
+                  max={MAX_COVERAGE_USDC}
                   value={coverage}
                   onChange={(e) => setCoverage(e.target.value)}
                   className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
                 />
-                <p className="text-sm text-ink-500 mt-1">Premium: 1% of coverage (paid in USDC)</p>
+                <p className="text-sm text-ink-500 mt-1">
+                  Premium: 1% of coverage · Max: {MAX_COVERAGE_USDC.toLocaleString()} USDC
+                </p>
+                {stats && stats.totalActiveCoverage > 0n && (
+                  <p className="text-xs text-ink-400 mt-1">
+                    Pool utilization: {((Number(stats.totalActiveCoverage) / Number(stats.balance)) * 100).toFixed(0)}%
+                  </p>
+                )}
               </div>
 
               {/* Trigger Magnitude */}

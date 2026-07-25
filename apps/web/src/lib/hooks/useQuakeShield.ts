@@ -24,6 +24,8 @@ export function usePoolStats() {
         totalPayouts: data[1],
         balance: data[2],
         activePolicies: data[3],
+        totalActiveCoverage: data[4],
+        totalShares: data[5],
       }
     : undefined;
 

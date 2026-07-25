@@ -53,6 +53,15 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
     address public oracle;
 
+    // ============ Solvency & Capital Provider State ============
+
+    uint256 public totalActiveCoverage;
+    uint256 public constant MAX_COVERAGE_PER_POLICY = 10_000e6; // 10,000 USDC
+    uint256 public constant MIN_RESERVE_RATIO_BPS = 15000;      // 150% (15000 basis points)
+
+    mapping(address => uint256) public providerShares;
+    uint256 public totalShares;
+
     // ============ Events ============
 
     event PolicyPurchased(
@@ -77,6 +86,9 @@ contract QuakeShield is Ownable, ReentrancyGuard {
     );
 
     event OracleUpdated(address indexed oldOracle, address indexed newOracle);
+
+    event CapitalDeposited(address indexed provider, uint256 amount, uint256 sharesMinted);
+    event CapitalWithdrawn(address indexed provider, uint256 amount);
 
     // ============ Modifiers ============
 
@@ -108,6 +120,55 @@ contract QuakeShield is Ownable, ReentrancyGuard {
     // ============ User Functions ============
 
     /**
+     * @notice Deposit USDC as a capital provider to earn yield from premiums
+     * @param amount USDC amount to deposit (6 decimals)
+     */
+    function deposit(uint256 amount) external nonReentrant {
+        require(amount > 0, "QuakeShield: deposit must be > 0");
+
+        uint256 poolValueBefore = usdc.balanceOf(address(this));
+        usdc.safeTransferFrom(msg.sender, address(this), amount);
+
+        uint256 shares;
+        if (totalShares == 0) {
+            shares = amount;
+        } else {
+            shares = (amount * totalShares) / poolValueBefore;
+        }
+
+        providerShares[msg.sender] += shares;
+        totalShares += shares;
+
+        emit CapitalDeposited(msg.sender, amount, shares);
+    }
+
+    /**
+     * @notice Withdraw full capital position (deposit + yield)
+     */
+    function withdraw() external nonReentrant {
+        uint256 myShares = providerShares[msg.sender];
+        require(myShares > 0, "QuakeShield: no shares");
+
+        uint256 poolValue = usdc.balanceOf(address(this));
+        uint256 withdrawAmount = (myShares * poolValue) / totalShares;
+
+        // Solvency check: pool must remain at 150% of active coverage after withdrawal
+        if (totalActiveCoverage > 0) {
+            uint256 newPoolValue = poolValue - withdrawAmount;
+            require(
+                (newPoolValue * 10000) / totalActiveCoverage >= MIN_RESERVE_RATIO_BPS,
+                "QuakeShield: would break reserve ratio"
+            );
+        }
+
+        providerShares[msg.sender] = 0;
+        totalShares -= myShares;
+
+        usdc.safeTransfer(msg.sender, withdrawAmount);
+        emit CapitalWithdrawn(msg.sender, withdrawAmount);
+    }
+
+    /**
      * @notice Buy an earthquake insurance policy
      * @param coverageAmount Payout amount in USDC (6 decimals)
      * @param triggerMagnitude Minimum magnitude to trigger payout (scaled by 100)
@@ -124,8 +185,17 @@ contract QuakeShield is Ownable, ReentrancyGuard {
         uint256 radiusKm
     ) external nonReentrant returns (uint256) {
         require(coverageAmount > 0, "QuakeShield: coverage must be > 0");
+        require(coverageAmount <= MAX_COVERAGE_PER_POLICY, "QuakeShield: exceeds max coverage");
         require(triggerMagnitude >= 400, "QuakeShield: minimum magnitude is 4.0");
         require(radiusKm > 0 && radiusKm <= 500, "QuakeShield: radius must be 1-500km");
+
+        // Solvency check: pool must have 150% reserve ratio after this policy
+        uint256 poolBalance = usdc.balanceOf(address(this));
+        uint256 newTotalCoverage = totalActiveCoverage + coverageAmount;
+        require(
+            (poolBalance * 10000) / newTotalCoverage >= MIN_RESERVE_RATIO_BPS,
+            "QuakeShield: pool reserve ratio insufficient"
+        );
 
         // 1% premium
         uint256 premium = coverageAmount * 10 / 1000;
@@ -149,6 +219,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
 
         userPolicies[msg.sender].push(policyId);
         totalPremiums += premium;
+        totalActiveCoverage += coverageAmount;
 
         emit PolicyPurchased(policyId, msg.sender, coverageAmount, premium);
         return policyId;
@@ -218,7 +289,9 @@ contract QuakeShield is Ownable, ReentrancyGuard {
             uint256 _totalPremiums,
             uint256 _totalPayouts,
             uint256 _balance,
-            uint256 _activePolicies
+            uint256 _activePolicies,
+            uint256 _totalActiveCoverage,
+            uint256 _totalShares
         )
     {
         uint256 activeCount = 0;
@@ -231,8 +304,36 @@ contract QuakeShield is Ownable, ReentrancyGuard {
             totalPremiums,
             totalPayouts,
             usdc.balanceOf(address(this)),
-            activeCount
+            activeCount,
+            totalActiveCoverage,
+            totalShares
         );
+    }
+
+    /**
+     * @notice Get a capital provider's share count and current value
+     * @param provider The provider address
+     * @return shares Number of shares owned
+     * @return currentValue Current USDC value of shares (deposit + yield)
+     */
+    function getProviderInfo(address provider) external view returns (uint256 shares, uint256 currentValue) {
+        shares = providerShares[provider];
+        if (totalShares == 0 || shares == 0) {
+            return (shares, 0);
+        }
+        currentValue = (shares * usdc.balanceOf(address(this))) / totalShares;
+    }
+
+    /**
+     * @notice Get current reserve ratio in basis points (10000 = 100%)
+     * @return reserveRatioBps Reserve ratio scaled by 10000
+     */
+    function getReserveRatio() external view returns (uint256 reserveRatioBps) {
+        uint256 poolValue = usdc.balanceOf(address(this));
+        if (totalActiveCoverage == 0) {
+            return type(uint256).max;
+        }
+        return (poolValue * 10000) / totalActiveCoverage;
     }
 
     // ============ Internal Functions ============
@@ -264,6 +365,7 @@ contract QuakeShield is Ownable, ReentrancyGuard {
                 p.hasPaidOut = true;
                 p.isActive = false;
                 totalPayouts += p.coverageAmount;
+                totalActiveCoverage -= p.coverageAmount;
                 usdc.safeTransfer(p.policyholder, p.coverageAmount);
                 emit PayoutExecuted(i, p.policyholder, p.coverageAmount, magnitude);
             }

@@ -102,7 +102,7 @@ export default function DashboardPage() {
         )}
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
           <QuickAction
             href="/policies/new"
             title="Buy Policy"
@@ -110,6 +110,16 @@ export default function DashboardPage() {
             icon={
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            }
+          />
+          <QuickAction
+            href="/providers"
+            title="Capital Providers"
+            description="Deposit USDC and earn yield from premiums"
+            icon={
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             }
           />
@@ -138,7 +148,16 @@ export default function DashboardPage() {
         {/* Pool Stats */}
         <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6">
           <h2 className="text-xl font-semibold text-ink-900 mb-4">Insurance Pool Stats</h2>
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-5 gap-6">
+            <StatCard
+              label="Pool Balance"
+              value={stats ? `${SCALE.fromUSDC(stats.balance).toLocaleString()} USDC` : "--"}
+            />
+            <StatCard
+              label="Active Coverage"
+              value={stats ? `${SCALE.fromUSDC(stats.totalActiveCoverage).toLocaleString()} USDC` : "--"}
+            />
+            <StatCard label="Active Policies" value={stats ? stats.activePolicies.toString() : "--"} />
             <StatCard
               label="Total Premiums"
               value={stats ? `${SCALE.fromUSDC(stats.totalPremiums).toLocaleString()} USDC` : "--"}
@@ -147,9 +166,32 @@ export default function DashboardPage() {
               label="Total Payouts"
               value={stats ? `${SCALE.fromUSDC(stats.totalPayouts).toLocaleString()} USDC` : "--"}
             />
-            <StatCard label="Pool Balance" value={stats ? `${SCALE.fromUSDC(stats.balance).toLocaleString()} USDC` : "--"} />
-            <StatCard label="Active Policies" value={stats ? stats.activePolicies.toString() : "--"} />
           </div>
+          {stats && stats.totalActiveCoverage > 0n && (
+            <div className="mt-4">
+              <div className="flex justify-between text-sm text-ink-600 mb-1">
+                <span>Reserve Ratio</span>
+                <span>
+                  {((Number(stats.balance) / Number(stats.totalActiveCoverage)) * 100).toFixed(0)}%
+                  <span className="text-ink-400 ml-1">(min 150%)</span>
+                </span>
+              </div>
+              <div className="w-full bg-ink-100 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    Number(stats.balance) / Number(stats.totalActiveCoverage) < 1.5
+                      ? "bg-red-500"
+                      : Number(stats.balance) / Number(stats.totalActiveCoverage) < 2
+                        ? "bg-yellow-500"
+                        : "bg-shield-500"
+                  }`}
+                  style={{
+                    width: `${Math.min((Number(stats.balance) / Number(stats.totalActiveCoverage)) * 100 / 3, 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
           {!CONTRACTS_CONFIGURED && (
             <p className="mt-4 text-sm text-ink-500">Deploy the contracts to see live stats here.</p>
           )}
