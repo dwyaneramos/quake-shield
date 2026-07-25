@@ -4,7 +4,11 @@ import { useState } from "react";
 import EarthquakeProbabilityGraph from "./EarthquakeProbabilityGraph";
 import CityWidgets from "./CityWidgets";
 
-export default function HomeClient() {
+export default function HomeClient({
+  minMagnitude = 5,
+}: {
+  minMagnitude?: number;
+}) {
   const [selectedCity, setSelectedCity] = useState("wellington");
 
   return (
@@ -12,6 +16,7 @@ export default function HomeClient() {
       <EarthquakeProbabilityGraph
         selectedCity={selectedCity}
         onCityChange={setSelectedCity}
+        minMagnitude={minMagnitude}
       />
       <CityWidgets
         selectedCity={selectedCity}

@@ -26,6 +26,11 @@ async function main() {
   const earthquakeMarketAddress = await earthquakeMarket.getAddress();
   console.log("EarthquakeMarket deployed to:", earthquakeMarketAddress);
 
+  // Set oracle on EarthquakeMarket (deployer is oracle by default)
+  console.log("\n--- Setting oracle address ---");
+  await earthquakeMarket.setOracle(deployer.address);
+  console.log("Oracle set to:", deployer.address);
+
   console.log("\n--- Creating sample market ---");
   // M6.0+ within 50km of Wellington, resolves 30 days out.
   const wellingtonLat = -41_286_500n; // scaled 1e6

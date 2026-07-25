@@ -44,8 +44,7 @@ export const env = {
   GEONET_API_URL: process.env.GEONET_API_URL || "https://api.geonet.org.nz",
 } as const;
 
-// Validate required env vars
-const required = ["PRIVATE_KEY", "RPC_URL", "QUAKE_SHIELD_ADDRESS", "USDC_ADDRESS"] as const;
+const required = ["PRIVATE_KEY", "QUAKE_SHIELD_ADDRESS", "USDC_ADDRESS"] as const;
 for (const key of required) {
   if (!env[key]) {
     throw new Error(`Missing required environment variable: ${key}`);
