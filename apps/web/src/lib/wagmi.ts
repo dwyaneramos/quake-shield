@@ -1,16 +1,17 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { polygonAmoy } from "viem/chains";
+import { avalancheFuji, sepolia } from "viem/chains";
 import { http } from "wagmi";
+import { RPC_URLS } from "@/lib/chains";
 
-const rpcUrl = process.env.NEXT_PUBLIC_POLYGON_AMOY_RPC || polygonAmoy.rpcUrls.default.http[0];
 const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 
 export const wagmiConfig = getDefaultConfig({
   appName: "QuakeShield",
   projectId: walletConnectProjectId || "quakeshield-dev",
-  chains: [polygonAmoy],
+  chains: [sepolia, avalancheFuji],
   transports: {
-    [polygonAmoy.id]: http(rpcUrl),
+    [sepolia.id]: http(RPC_URLS[sepolia.id]),
+    [avalancheFuji.id]: http(RPC_URLS[avalancheFuji.id]),
   },
   ssr: true,
 });

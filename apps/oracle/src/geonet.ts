@@ -1,18 +1,53 @@
 import { env } from "./config.js";
-import {
-  GEONET_WFS_BASE_URL,
-  GEONET_REST_BASE_URL,
-  type GeoNetQuake,
-  type BoundingBox,
-  type WFSQuery,
-  type MarketCriteria as MarketCriteriaType,
-  type MarketResolution,
-} from "@quakeshield/shared";
 
-export type MarketCriteria = MarketCriteriaType;
+export const GEONET_WFS_BASE_URL = "https://wfs.geonet.org.nz/geonet/ows";
+export const GEONET_REST_BASE_URL = "https://api.geonet.org.nz";
 
-// Re-export the shared type for convenience
-export type { GeoNetQuake } from "@quakeshield/shared";
+interface GeoNetQuake {
+  publicID: string;
+  time: string;
+  depth: number;
+  magnitude: number;
+  locality: string;
+  mmi: number;
+  quality: "best" | "reviewed" | "automatic" | "preliminary" | "deleted";
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface BoundingBox {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
+export interface WFSQuery {
+  bbox?: BoundingBox;
+  startTime?: string;
+  endTime?: string;
+  minMagnitude?: number;
+  maxMagnitude?: number;
+  maxResults?: number;
+}
+
+export interface MarketCriteria {
+  minMagnitude: number;
+  centerLat: number;
+  centerLng: number;
+  radiusKm: number;
+  startTime: string;
+  endTime: string;
+}
+
+export interface MarketResolution {
+  resolved: boolean;
+  outcome: boolean;
+  qualifyingQuake?: GeoNetQuake;
+  checkedAt: string;
+}
+
+export type { GeoNetQuake };
 
 // ============ REST API ============
 
@@ -141,7 +176,7 @@ function haversineDistanceKm(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function quakeMatchesCriteria(quake: GeoNetQuake, criteria: MarketCriteriaType): boolean {
+function quakeMatchesCriteria(quake: GeoNetQuake, criteria: MarketCriteria): boolean {
   if (quake.magnitude < criteria.minMagnitude) return false;
   if (quake.latitude === undefined || quake.longitude === undefined) return false;
 
@@ -159,7 +194,7 @@ function quakeMatchesCriteria(quake: GeoNetQuake, criteria: MarketCriteriaType):
  * Check if any earthquake in the given time window matches the market's criteria.
  * Returns the resolution outcome for the prediction market.
  */
-export async function resolveMarket(criteria: MarketCriteriaType): Promise<MarketResolution> {
+export async function resolveMarket(criteria: MarketCriteria): Promise<MarketResolution> {
   const bbox: BoundingBox = {
     west: criteria.centerLng - criteria.radiusKm / 83,
     east: criteria.centerLng + criteria.radiusKm / 83,

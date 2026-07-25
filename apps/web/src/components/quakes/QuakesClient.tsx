@@ -3,8 +3,8 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { GEONET } from "@/lib/polygon";
-import { haversineDistanceKm } from "@quakeshield/shared";
+import { GEONET } from "@/lib/chains";
+import { haversineDistanceKm } from "@/lib/geonet";
 import type { GeoNetQuake } from "@/types";
 
 const QuakeMap = dynamic(() => import("./QuakeMap").then((mod) => mod.QuakeMap), {

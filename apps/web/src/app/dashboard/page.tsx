@@ -1,14 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 function getMagnitudeLabel(magnitude: number): string {
-  const labels: Record<number, string> = { 0: "Micro", 1: "Micro", 2: "Micro", 3: "Minor", 4: "Light", 5: "Moderate", 6: "Strong", 7: "Major", 8: "Great" };
+  const labels: Record<number, string> = {
+    0: "Micro",
+    1: "Micro",
+    2: "Micro",
+    3: "Minor",
+    4: "Light",
+    5: "Moderate",
+    6: "Strong",
+    7: "Major",
+    8: "Great",
+  };
   return labels[Math.floor(magnitude)] || "Great";
 }
 import { ConnectButton } from "@/components/web3/ConnectButton";
 import { Header } from "@/components/layout/Header";
-import { CONTRACTS_CONFIGURED } from "@/lib/contracts";
+import { isChainConfigured } from "@/lib/contracts";
 import { usePoolStats, useUserPolicies } from "@/lib/hooks/useQuakeShield";
 import { SCALE } from "@/types";
 import HomeClient from "@/components/landing/HomeClient";
@@ -16,6 +26,8 @@ import DashboardQuakeFeed from "@/components/quakes/DashboardQuakeFeed";
 
 export default function DashboardPage() {
   const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const chainConfigured = isChainConfigured(chainId);
   const { stats, isLoading: statsLoading } = usePoolStats();
   const { policies, isLoading: policiesLoading } = useUserPolicies();
 
@@ -34,23 +46,37 @@ export default function DashboardPage() {
 
         {/* Wallet Section */}
         <div className="mt-12 max-w-5xl mx-auto">
-          {!CONTRACTS_CONFIGURED && (
+          {!chainConfigured && (
             <div className="bg-quake-50 border border-quake-200 text-quake-800 rounded-xl p-4 mb-6 text-sm">
-              Contracts aren&rsquo;t deployed yet — set <code>NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS</code> and{" "}
-              <code>NEXT_PUBLIC_MOCK_USDC_ADDRESS</code> in <code>apps/web/.env.local</code> to see live data.
+              QuakeShield isn&rsquo;t deployed on this network yet — switch
+              networks in your wallet, or set the contract addresses for it in
+              the root <code>.env</code> to see live data.
             </div>
           )}
 
           {!isConnected ? (
             <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-8 text-center">
               <div className="w-16 h-16 bg-shield-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-shield-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                <svg
+                  className="w-8 h-8 text-shield-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-ink-900 mb-2">Connect Your Wallet</h2>
+              <h2 className="text-xl font-semibold text-ink-900 mb-2">
+                Connect Your Wallet
+              </h2>
               <p className="text-ink-600 mb-6">
-                Connect your wallet to view policies, buy coverage, and track payouts.
+                Connect your wallet to view policies, buy coverage, and track
+                payouts.
               </p>
               <div className="flex justify-center">
                 <ConnectButton />
@@ -61,17 +87,28 @@ export default function DashboardPage() {
               {/* Your Policies */}
               <div className="bg-white rounded-xl shadow-sm border border-ink-100 mb-6">
                 <div className="p-6 border-b border-ink-100 flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-ink-900">Your Policies</h2>
-                  <Link href="/policies/new" className="text-sm font-semibold text-shield-600 hover:text-shield-700">
+                  <h2 className="text-xl font-semibold text-ink-900">
+                    Your Policies
+                  </h2>
+                  <Link
+                    href="/policies/new"
+                    className="text-sm font-semibold text-shield-600 hover:text-shield-700"
+                  >
                     + Buy Policy
                   </Link>
                 </div>
                 {policiesLoading ? (
-                  <p className="p-8 text-center text-ink-500">Loading policies…</p>
+                  <p className="p-8 text-center text-ink-500">
+                    Loading policies…
+                  </p>
                 ) : policies.length === 0 ? (
                   <div className="p-8 text-center text-ink-500">
-                    <p className="text-lg font-medium text-ink-900 mb-1">No policies yet</p>
-                    <p className="mb-4">Buy your first policy to get covered.</p>
+                    <p className="text-lg font-medium text-ink-900 mb-1">
+                      No policies yet
+                    </p>
+                    <p className="mb-4">
+                      Buy your first policy to get covered.
+                    </p>
                     <Link
                       href="/policies/new"
                       className="inline-block bg-shield-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-shield-700 transition-colors"
@@ -82,19 +119,32 @@ export default function DashboardPage() {
                 ) : (
                   <div className="divide-y divide-ink-100">
                     {policies.map((policy) => {
-                      const magnitude = SCALE.fromMagnitude(policy.triggerMagnitude);
+                      const magnitude = SCALE.fromMagnitude(
+                        policy.triggerMagnitude,
+                      );
                       return (
-                        <div key={policy.id.toString()} className="p-4 flex items-center gap-4">
+                        <div
+                          key={policy.id.toString()}
+                          className="p-4 flex items-center gap-4"
+                        >
                           <div className="w-14 h-14 rounded-lg bg-shield-100 text-shield-700 flex items-center justify-center font-bold text-lg">
                             M{magnitude.toFixed(1)}
                           </div>
                           <div className="flex-1">
                             <p className="font-medium text-ink-900">
-                              {getMagnitudeLabel(magnitude)} quake trigger · {policy.radiusKm.toString()}km radius
+                              {getMagnitudeLabel(magnitude)} quake trigger ·{" "}
+                              {policy.radiusKm.toString()}km radius
                             </p>
                             <p className="text-sm text-ink-500">
-                              Coverage {SCALE.fromUSDC(policy.coverageAmount).toLocaleString()} USDC · Premium{" "}
-                              {SCALE.fromUSDC(policy.premiumPaid).toLocaleString()} USDC
+                              Coverage{" "}
+                              {SCALE.fromUSDC(
+                                policy.coverageAmount,
+                              ).toLocaleString()}{" "}
+                              USDC · Premium{" "}
+                              {SCALE.fromUSDC(
+                                policy.premiumPaid,
+                              ).toLocaleString()}{" "}
+                              USDC
                             </p>
                           </div>
                           <span
@@ -102,11 +152,15 @@ export default function DashboardPage() {
                               policy.hasPaidOut
                                 ? "bg-shield-100 text-shield-700"
                                 : policy.isActive
-                                  ? "bg-quake-100 text-quake-700"
-                                  : "bg-ink-100 text-ink-500"
+                                ? "bg-quake-100 text-quake-700"
+                                : "bg-ink-100 text-ink-500"
                             }`}
                           >
-                            {policy.hasPaidOut ? "Paid out" : policy.isActive ? "Active" : "Inactive"}
+                            {policy.hasPaidOut
+                              ? "Paid out"
+                              : policy.isActive
+                              ? "Active"
+                              : "Inactive"}
                           </span>
                         </div>
                       );
@@ -117,23 +171,55 @@ export default function DashboardPage() {
 
               {/* Pool Stats */}
               <div className="bg-white rounded-xl shadow-sm border border-ink-100 p-6">
-                <h2 className="text-xl font-semibold text-ink-900 mb-4">Insurance Pool</h2>
+                <h2 className="text-xl font-semibold text-ink-900 mb-4">
+                  Insurance Pool
+                </h2>
                 <div className="grid md:grid-cols-4 gap-6">
                   <StatCard
                     label="Total Premiums"
-                    value={stats ? `${SCALE.fromUSDC(stats.totalPremiums).toLocaleString()} USDC` : "--"}
+                    value={
+                      stats
+                        ? `${SCALE.fromUSDC(
+                            stats.totalPremiums,
+                          ).toLocaleString()} USDC`
+                        : "--"
+                    }
                   />
                   <StatCard
                     label="Total Payouts"
-                    value={stats ? `${SCALE.fromUSDC(stats.totalPayouts).toLocaleString()} USDC` : "--"}
+                    value={
+                      stats
+                        ? `${SCALE.fromUSDC(
+                            stats.totalPayouts,
+                          ).toLocaleString()} USDC`
+                        : "--"
+                    }
                   />
-                  <StatCard label="Pool Balance" value={stats ? `${SCALE.fromUSDC(stats.balance).toLocaleString()} USDC` : "--"} />
-                  <StatCard label="Active Policies" value={stats ? stats.activePolicies.toString() : "--"} />
+                  <StatCard
+                    label="Pool Balance"
+                    value={
+                      stats
+                        ? `${SCALE.fromUSDC(
+                            stats.balance,
+                          ).toLocaleString()} USDC`
+                        : "--"
+                    }
+                  />
+                  <StatCard
+                    label="Active Policies"
+                    value={stats ? stats.activePolicies.toString() : "--"}
+                  />
                 </div>
-                {!CONTRACTS_CONFIGURED && (
-                  <p className="mt-4 text-sm text-ink-500">Deploy the contracts to see live stats here.</p>
+                {!chainConfigured && (
+                  <p className="mt-4 text-sm text-ink-500">
+                    Deploy the contracts to see live stats here.
+                  </p>
                 )}
-                {CONTRACTS_CONFIGURED && statsLoading && <p className="mt-4 text-sm text-ink-500">Loading pool stats…</p>}
+                {chainConfigured && statsLoading && (
+                  <p className="mt-4 text-sm text-ink-500">
+                    Loading pool stats…
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -141,7 +227,10 @@ export default function DashboardPage() {
 
         {/* Footer */}
         <div className="mt-16 text-center text-ink-400 text-xs">
-          <p>Earthquake data sourced from GeoNet (CC BY 3.0 NZ) &middot; Updated every 30s</p>
+          <p>
+            Earthquake data sourced from GeoNet (CC BY 3.0 NZ) &middot; Updated
+            every 30s
+          </p>
         </div>
       </main>
     </div>

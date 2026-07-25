@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useAccount, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { CONTRACTS, MOCK_USDC_ABI, QUAKESHIELD_ABI } from "@/lib/contracts";
+import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
+import { MOCK_USDC_ABI, QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
 
 export type BuyPolicyStep = "idle" | "approving" | "buying" | "done" | "error";
 
@@ -17,17 +17,19 @@ export interface BuyPolicyInput {
 /** Buying a policy is two on-chain transactions: approve the premium spend, then buyPolicy. */
 export function useBuyPolicy() {
   const { address } = useAccount();
+  const chainId = useChainId();
+  const { QUAKESHIELD_ADDRESS, USDC_ADDRESS } = getContracts(chainId);
   const publicClient = usePublicClient();
   const [step, setStep] = useState<BuyPolicyStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const [buyTxHash, setBuyTxHash] = useState<`0x${string}` | undefined>();
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: CONTRACTS.USDC_ADDRESS as `0x${string}`,
+    address: USDC_ADDRESS as `0x${string}`,
     abi: MOCK_USDC_ABI,
     functionName: "allowance",
-    args: address ? [address, CONTRACTS.QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
-    query: { enabled: Boolean(address) },
+    args: address ? [address, QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
+    query: { enabled: Boolean(address && USDC_ADDRESS) },
   });
 
   const { writeContractAsync } = useWriteContract();
@@ -46,10 +48,10 @@ export function useBuyPolicy() {
         if (currentAllowance < premium) {
           setStep("approving");
           const approveHash = await writeContractAsync({
-            address: CONTRACTS.USDC_ADDRESS as `0x${string}`,
+            address: USDC_ADDRESS as `0x${string}`,
             abi: MOCK_USDC_ABI,
             functionName: "approve",
-            args: [CONTRACTS.QUAKESHIELD_ADDRESS as `0x${string}`, premium],
+            args: [QUAKESHIELD_ADDRESS as `0x${string}`, premium],
           });
           await publicClient.waitForTransactionReceipt({ hash: approveHash });
           await refetchAllowance();
@@ -57,7 +59,7 @@ export function useBuyPolicy() {
 
         setStep("buying");
         const hash = await writeContractAsync({
-          address: CONTRACTS.QUAKESHIELD_ADDRESS as `0x${string}`,
+          address: QUAKESHIELD_ADDRESS as `0x${string}`,
           abi: QUAKESHIELD_ABI,
           functionName: "buyPolicy",
           args: [input.coverageAmount, input.triggerMagnitude, input.centerLat, input.centerLng, input.radiusKm],
@@ -72,7 +74,7 @@ export function useBuyPolicy() {
         throw e;
       }
     },
-    [allowance, publicClient, refetchAllowance, writeContractAsync]
+    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, USDC_ADDRESS]
   );
 
   return {
