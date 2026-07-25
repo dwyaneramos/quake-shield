@@ -227,10 +227,6 @@ export default function AdminPage() {
                   }
                 />
                 <StatCard
-                  label="Total Shares"
-                  value={stats.totalShares.toString()}
-                />
-                <StatCard
                   label="Profit/Loss"
                   value={`$${SCALE.fromDNZD(stats.totalPremiums - stats.totalPayouts).toLocaleString()}`}
                   highlight={

@@ -11,9 +11,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "QuakeShield - Parametric Earthquake Insurance",
+  title: "QuakeShield - Parametric Earthquake Insurance & Regional Investments",
   description:
-    "Automatic, on-chain earthquake insurance for New Zealand. Set a trigger, pay a premium, get paid in minutes when GeoNet confirms the shake — no adjusters, no delays.",
+    "Automatic, on-chain earthquake insurance for New Zealand, funded by investors who back specific regions. Policyholders get paid in minutes when GeoNet confirms a quake; investors earn a fortnightly return for every region that stays quiet.",
 };
 
 export default function RootLayout({

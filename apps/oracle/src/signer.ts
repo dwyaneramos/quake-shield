@@ -1,24 +1,26 @@
 import { ethers } from "ethers";
 import { env } from "./config.js";
+import type { RegionBounds } from "./risk.js";
 
 const QUAKESHIELD_ABI = [
   "function recordEarthquake(uint256 magnitude, int256 latitude, int256 longitude, uint256 depth, string publicId) returns (uint256)",
   "function getQuakeCount() view returns (uint256)",
   "function recordedQuakes(uint256) view returns (uint256 magnitude, int256 latitude, int256 longitude, uint256 depth, uint256 timestamp, string publicId)",
   "event QuakeRecorded(uint256 indexed quakeId, uint256 magnitude, int256 lat, int256 lng)",
+
+  // Regional investments
+  "function getRegionCount() view returns (uint256)",
+  "function getRegion(uint256) view returns (tuple(string name, int256 south, int256 north, int256 west, int256 east, uint256 totalAssets, uint256 totalShares, uint256 epoch, uint256 riskScoreBps, uint256 riskUpdatedAt, uint256 lastAccrualAt, uint256 lastQuakeAt, uint256 quakeCount, uint256 totalInterestPaid, uint256 totalLosses, bool active))",
+  "function setRegionRiskScores(uint256[] regionIds, uint256[] riskScoresBps)",
+  "function accrueAllRegions() returns (uint256)",
+  "function ACCRUAL_PERIOD() view returns (uint256)",
 ];
 
-// EarthquakeMarket ABI (only the functions the resolver needs)
-const EARTHQUAKE_MARKET_ABI = [
-  "function getMarketCount() view returns (uint256)",
-  "function getMarket(uint256) view returns (tuple(string description, int256 centerLat, int256 centerLng, uint256 radiusKm, uint256 triggerMagnitude, uint256 createdAt, uint256 resolutionTime, uint256 yesReserve, uint256 noReserve, uint256 collateralBalance, bool resolved, bool outcomeYes))",
-  "function resolveMarket(uint256 marketId, bool outcomeYes)",
-];
+const LATLNG_SCALE = 1_000_000;
 
 let provider: ethers.JsonRpcProvider;
 let wallet: ethers.Wallet;
 let quakeShieldContract: ethers.Contract;
-let marketContract: ethers.Contract | null = null;
 
 /**
  * Initialize blockchain connection
@@ -31,13 +33,6 @@ export function initBlockchain(): void {
   console.log(`[Blockchain] Connected to ${env.NETWORK_NAME}`);
   console.log("[Blockchain] Oracle address:", wallet.address);
   console.log("[Blockchain] QuakeShield:", env.QUAKE_SHIELD_ADDRESS);
-
-  if (env.EARTHQUAKE_MARKET_ADDRESS) {
-    marketContract = new ethers.Contract(env.EARTHQUAKE_MARKET_ADDRESS, EARTHQUAKE_MARKET_ABI, wallet);
-    console.log("[Blockchain] EarthquakeMarket:", env.EARTHQUAKE_MARKET_ADDRESS);
-  } else {
-    console.log("[Blockchain] EarthquakeMarket not configured for this network — skipping market resolution");
-  }
 }
 
 export function getSignerAddress(): string {
@@ -82,75 +77,64 @@ export async function isQuakeRecorded(publicId: string): Promise<boolean> {
   return false;
 }
 
-export interface RecordedQuake {
-  magnitude: bigint;
-  latitude: bigint;
-  longitude: bigint;
-  timestamp: bigint;
+// ============ Regions ============
+
+export interface OnChainRegion extends RegionBounds {
+  riskScoreBps: number;
+  lastAccrualAt: bigint;
+  totalAssets: bigint;
+  active: boolean;
 }
 
 /**
- * Fetch all quakes QuakeShield has recorded on this chain — the single
- * source of truth EarthquakeMarket resolution is checked against.
+ * Read every registered region off the contract. The contract is the source of
+ * truth for region boundaries — the oracle never carries its own copy, so the
+ * two can't drift apart.
  */
-export async function getRecordedQuakes(): Promise<RecordedQuake[]> {
-  const count = await getQuakeCount();
-  const quakes: RecordedQuake[] = [];
+export async function getRegions(): Promise<OnChainRegion[]> {
+  const count = Number(await quakeShieldContract.getRegionCount());
+  const regions: OnChainRegion[] = [];
 
   for (let i = 0; i < count; i++) {
-    const q = await quakeShieldContract.recordedQuakes(i);
-    quakes.push({ magnitude: q.magnitude, latitude: q.latitude, longitude: q.longitude, timestamp: q.timestamp });
-  }
-
-  return quakes;
-}
-
-export interface OnChainMarket {
-  id: number;
-  centerLat: bigint;
-  centerLng: bigint;
-  radiusKm: bigint;
-  triggerMagnitude: bigint;
-  createdAt: bigint;
-  resolutionTime: bigint;
-}
-
-/**
- * Fetch all not-yet-resolved EarthquakeMarket markets on this chain.
- * Returns an empty list if EarthquakeMarket isn't configured for this network.
- */
-export async function getUnresolvedMarkets(): Promise<OnChainMarket[]> {
-  if (!marketContract) return [];
-
-  const count = Number(await marketContract.getMarketCount());
-  const markets: OnChainMarket[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const m = await marketContract.getMarket(i);
-    if (m.resolved) continue;
-    markets.push({
+    const region = await quakeShieldContract.getRegion(i);
+    regions.push({
       id: i,
-      centerLat: m.centerLat,
-      centerLng: m.centerLng,
-      radiusKm: m.radiusKm,
-      triggerMagnitude: m.triggerMagnitude,
-      createdAt: m.createdAt,
-      resolutionTime: m.resolutionTime,
+      name: region.name,
+      south: Number(region.south) / LATLNG_SCALE,
+      north: Number(region.north) / LATLNG_SCALE,
+      west: Number(region.west) / LATLNG_SCALE,
+      east: Number(region.east) / LATLNG_SCALE,
+      riskScoreBps: Number(region.riskScoreBps),
+      lastAccrualAt: region.lastAccrualAt,
+      totalAssets: region.totalAssets,
+      active: region.active,
     });
   }
 
-  return markets;
+  return regions;
 }
 
-/**
- * Submit a market resolution. A YES claim is verified on-chain against
- * QuakeShield's recorded quakes; a NO claim only succeeds past resolutionTime.
- */
-export async function submitMarketResolution(marketId: number, outcomeYes: boolean): Promise<void> {
-  if (!marketContract) return;
+/** Push a batch of freshly computed risk scores in a single transaction. */
+export async function submitRiskScores(
+  regionIds: number[],
+  riskScoresBps: number[]
+): Promise<void> {
+  if (regionIds.length === 0) return;
 
-  console.log(`[Blockchain] Resolving market ${marketId}: ${outcomeYes ? "YES" : "NO"}`);
-  const tx = await marketContract.resolveMarket(marketId, outcomeYes);
+  console.log(`[Blockchain] Updating risk score for ${regionIds.length} region(s)`);
+  const tx = await quakeShieldContract.setRegionRiskScores(regionIds, riskScoresBps);
   const receipt = await tx.wait();
-  console.log(`[Blockchain] Market ${marketId} resolved in block ${receipt.blockNumber}`);
+  console.log(`[Blockchain] Risk scores updated in block ${receipt.blockNumber}`);
+}
+
+/** Settle every region that has a fortnight owing. */
+export async function runAccrual(): Promise<void> {
+  console.log("[Blockchain] Running fortnightly accrual");
+  const tx = await quakeShieldContract.accrueAllRegions();
+  const receipt = await tx.wait();
+  console.log(`[Blockchain] Accrual settled in block ${receipt.blockNumber}`);
+}
+
+export async function getAccrualPeriodSeconds(): Promise<bigint> {
+  return quakeShieldContract.ACCRUAL_PERIOD();
 }

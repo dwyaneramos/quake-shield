@@ -31,22 +31,6 @@ export interface WFSQuery {
   maxResults?: number;
 }
 
-export interface MarketCriteria {
-  minMagnitude: number;
-  centerLat: number;
-  centerLng: number;
-  radiusKm: number;
-  startTime: string;
-  endTime: string;
-}
-
-export interface MarketResolution {
-  resolved: boolean;
-  outcome: boolean;
-  qualifyingQuake?: GeoNetQuake;
-  checkedAt: string;
-}
-
 export type { GeoNetQuake };
 
 // ============ REST API ============
@@ -108,7 +92,7 @@ function buildCQLFilter(query: WFSQuery): string {
     parts.push(`magnitude<=${query.maxMagnitude}`);
   }
 
-  return parts.join("+AND+");
+  return parts.join(" AND ");
 }
 
 /**
@@ -153,71 +137,6 @@ export async function fetchWFSQuakes(query: WFSQuery): Promise<GeoNetQuake[]> {
     latitude: feature.geometry?.coordinates?.[1],
     longitude: feature.geometry?.coordinates?.[0],
   }));
-}
-
-// ============ Market Resolution ============
-
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
-function haversineDistanceKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
-  const R = 6371;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function quakeMatchesCriteria(quake: GeoNetQuake, criteria: MarketCriteria): boolean {
-  if (quake.magnitude < criteria.minMagnitude) return false;
-  if (quake.latitude === undefined || quake.longitude === undefined) return false;
-
-  const distance = haversineDistanceKm(
-    criteria.centerLat,
-    criteria.centerLng,
-    quake.latitude,
-    quake.longitude,
-  );
-
-  return distance <= criteria.radiusKm;
-}
-
-/**
- * Check if any earthquake in the given time window matches the market's criteria.
- * Returns the resolution outcome for the prediction market.
- */
-export async function resolveMarket(criteria: MarketCriteria): Promise<MarketResolution> {
-  const bbox: BoundingBox = {
-    west: criteria.centerLng - criteria.radiusKm / 83,
-    east: criteria.centerLng + criteria.radiusKm / 83,
-    south: criteria.centerLat - criteria.radiusKm / 111,
-    north: criteria.centerLat + criteria.radiusKm / 111,
-  };
-
-  const quakes = await fetchWFSQuakes({
-    bbox,
-    startTime: criteria.startTime,
-    endTime: criteria.endTime,
-    minMagnitude: criteria.minMagnitude,
-    maxResults: 100,
-  });
-
-  const qualifyingQuake = quakes.find((q) => quakeMatchesCriteria(q, criteria));
-
-  return {
-    resolved: true,
-    outcome: !!qualifyingQuake,
-    qualifyingQuake,
-    checkedAt: new Date().toISOString(),
-  };
 }
 
 // ============ Value Conversion ============

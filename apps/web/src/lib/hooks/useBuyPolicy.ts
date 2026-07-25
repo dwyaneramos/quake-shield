@@ -1,14 +1,21 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useAccount, useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { MOCK_USDC_ABI, QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
+import {
+  useAccount,
+  useChainId,
+  usePublicClient,
+  useReadContract,
+  useWriteContract,
+} from "wagmi";
+import { DNZD_ABI, QUAKESHIELD_ABI, getContracts } from "@/lib/contracts";
 import { getFriendlyTxErrorMessage } from "@/lib/errors";
+import { estimateGasWithBuffer } from "@/lib/gas";
 
 export type BuyPolicyStep = "idle" | "approving" | "buying" | "done" | "error";
 
 export interface BuyPolicyInput {
-  coverageAmount: bigint; // USDC, 6 decimals
+  coverageAmount: bigint; // DNZD, 6 decimals
   triggerMagnitude: bigint; // x100
   centerLat: bigint; // x1e6
   centerLng: bigint; // x1e6
@@ -28,7 +35,7 @@ export function useBuyPolicy() {
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: DNZD_ADDRESS as `0x${string}`,
-    abi: MOCK_USDC_ABI,
+    abi: DNZD_ABI,
     functionName: "allowance",
     args: address ? [address, QUAKESHIELD_ADDRESS as `0x${string}`] : undefined,
     query: { enabled: Boolean(address && DNZD_ADDRESS) },
@@ -39,6 +46,7 @@ export function useBuyPolicy() {
   const buyPolicy = useCallback(
     async (input: BuyPolicyInput) => {
       if (!publicClient) throw new Error("Wallet not connected");
+      if (!address) throw new Error("Wallet not connected");
 
       setError(null);
       setBuyTxHash(undefined);
@@ -49,13 +57,23 @@ export function useBuyPolicy() {
 
         if (currentAllowance < premium) {
           setStep("approving");
-          const approveHash = await writeContractAsync({
+          const approveParams = {
             address: DNZD_ADDRESS as `0x${string}`,
-            abi: MOCK_USDC_ABI,
-            functionName: "approve",
-            args: [QUAKESHIELD_ADDRESS as `0x${string}`, premium],
+            abi: DNZD_ABI,
+            functionName: "approve" as const,
+            args: [QUAKESHIELD_ADDRESS as `0x${string}`, premium] as const,
+          };
+          const approveGas = await estimateGasWithBuffer(publicClient, {
+            ...approveParams,
+            account: address,
           });
-          const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash });
+          const approveHash = await writeContractAsync({
+            ...approveParams,
+            gas: approveGas,
+          });
+          const approveReceipt = await publicClient.waitForTransactionReceipt({
+            hash: approveHash,
+          });
           if (approveReceipt.status !== "success") {
             throw new Error("The approval transaction reverted on-chain.");
           }
@@ -63,10 +81,10 @@ export function useBuyPolicy() {
         }
 
         setStep("buying");
-        const hash = await writeContractAsync({
+        const buyParams = {
           address: QUAKESHIELD_ADDRESS as `0x${string}`,
           abi: QUAKESHIELD_ABI,
-          functionName: "buyPolicy",
+          functionName: "buyPolicy" as const,
           args: [
             input.coverageAmount,
             input.triggerMagnitude,
@@ -74,8 +92,13 @@ export function useBuyPolicy() {
             input.centerLng,
             input.radiusKm,
             input.recurring,
-          ],
+          ] as const,
+        };
+        const buyGas = await estimateGasWithBuffer(publicClient, {
+          ...buyParams,
+          account: address,
         });
+        const hash = await writeContractAsync({ ...buyParams, gas: buyGas });
         setBuyTxHash(hash);
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status !== "success") {
@@ -89,7 +112,15 @@ export function useBuyPolicy() {
         throw e;
       }
     },
-    [allowance, publicClient, refetchAllowance, writeContractAsync, QUAKESHIELD_ADDRESS, DNZD_ADDRESS]
+    [
+      address,
+      allowance,
+      publicClient,
+      refetchAllowance,
+      writeContractAsync,
+      QUAKESHIELD_ADDRESS,
+      DNZD_ADDRESS,
+    ],
   );
 
   return {
