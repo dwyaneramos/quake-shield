@@ -1,6 +1,8 @@
 // Auto-generated from packages/contracts/artifacts after `pnpm hardhat compile`.
 // Re-run the codegen (see AGENTS.md) if the contract ABI changes.
 
+import { avalancheFuji, sepolia } from "viem/chains";
+
 export const QUAKESHIELD_ABI = [
   {
     "inputs": [
@@ -1035,10 +1037,35 @@ export const MOCK_USDC_ABI = [
   }
 ] as const;
 
-// Contract addresses (set after deployment in apps/web/.env.local)
-export const CONTRACTS = {
-  QUAKESHIELD_ADDRESS: (process.env.NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS || "") as `0x${string}` | "",
-  USDC_ADDRESS: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS || "") as `0x${string}` | "",
-} as const;
+// Contract addresses are per-chain — QuakeShield is deployed separately to
+// Sepolia and Fuji, so there's a distinct MockUSDC/QuakeShield pair on each.
+// Set after deployment in the root .env.
+export interface ChainContracts {
+  QUAKESHIELD_ADDRESS: `0x${string}` | "";
+  USDC_ADDRESS: `0x${string}` | "";
+  DEPLOY_BLOCK: bigint;
+}
 
-export const CONTRACTS_CONFIGURED = Boolean(CONTRACTS.QUAKESHIELD_ADDRESS && CONTRACTS.USDC_ADDRESS);
+export const CONTRACTS_BY_CHAIN: Record<number, ChainContracts> = {
+  [sepolia.id]: {
+    QUAKESHIELD_ADDRESS: (process.env.NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
+    USDC_ADDRESS: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_SEPOLIA || "") as `0x${string}` | "",
+    DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_QUAKE_SHIELD_DEPLOY_BLOCK_SEPOLIA || "0"),
+  },
+  [avalancheFuji.id]: {
+    QUAKESHIELD_ADDRESS: (process.env.NEXT_PUBLIC_QUAKE_SHIELD_ADDRESS_FUJI || "") as `0x${string}` | "",
+    USDC_ADDRESS: (process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_FUJI || "") as `0x${string}` | "",
+    DEPLOY_BLOCK: BigInt(process.env.NEXT_PUBLIC_QUAKE_SHIELD_DEPLOY_BLOCK_FUJI || "0"),
+  },
+};
+
+const EMPTY_CONTRACTS: ChainContracts = { QUAKESHIELD_ADDRESS: "", USDC_ADDRESS: "", DEPLOY_BLOCK: 0n };
+
+export function getContracts(chainId: number | undefined): ChainContracts {
+  return (chainId && CONTRACTS_BY_CHAIN[chainId]) || EMPTY_CONTRACTS;
+}
+
+export function isChainConfigured(chainId: number | undefined): boolean {
+  const contracts = getContracts(chainId);
+  return Boolean(contracts.QUAKESHIELD_ADDRESS && contracts.USDC_ADDRESS);
+}

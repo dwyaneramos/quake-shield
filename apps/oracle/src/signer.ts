@@ -17,11 +17,11 @@ let contract: ethers.Contract;
  * Initialize blockchain connection
  */
 export function initBlockchain(): ethers.Contract {
-  provider = new ethers.JsonRpcProvider(env.POLYGON_AMOY_RPC);
+  provider = new ethers.JsonRpcProvider(env.RPC_URL);
   wallet = new ethers.Wallet(env.PRIVATE_KEY, provider);
   contract = new ethers.Contract(env.QUAKE_SHIELD_ADDRESS, QUAKESHIELD_ABI, wallet);
 
-  console.log("[Blockchain] Connected to Polygon Amoy");
+  console.log(`[Blockchain] Connected to ${env.NETWORK_NAME}`);
   console.log("[Blockchain] Oracle address:", wallet.address);
   console.log("[Blockchain] Contract address:", env.QUAKE_SHIELD_ADDRESS);
 

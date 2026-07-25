@@ -1,4 +1,4 @@
-import { GEONET } from "@/lib/polygon";
+import { GEONET } from "@/lib/chains";
 import type { GeoNetQuake } from "@/types";
 
 const GEONET_WFS_BASE_URL = "https://wfs.geonet.org.nz/geonet/ows";

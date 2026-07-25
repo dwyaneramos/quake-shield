@@ -79,7 +79,8 @@ function toRad(deg: number): number {
 
 // ============ Constants ============
 
-export const POLYGON_AMOY_CHAIN_ID = 80002;
+export const SEPOLIA_CHAIN_ID = 11155111;
+export const AVALANCHE_FUJI_CHAIN_ID = 43113;
 
 export const MAGNITUDE_LABELS: Record<number, string> = {
   0: "Micro",
@@ -125,7 +126,7 @@ export {
   haversineDistanceKm,
   NZ_BOUNDS,
   NZ_REGIONS,
-} from "./geonet-wfs.js";
+} from "./geonet-wfs";
 
 export type {
   GeoNetQuake,
@@ -134,4 +135,4 @@ export type {
   MarketCriteria,
   MarketResolution,
   QuakeStats,
-} from "./geonet-wfs.js";
+} from "./geonet-wfs";

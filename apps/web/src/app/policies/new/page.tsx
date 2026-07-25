@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useEffect, Suspense, useCallback } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import {
   AreaChart,
@@ -15,9 +15,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Header } from "@/components/layout/Header";
-import { CONTRACTS_CONFIGURED } from "@/lib/contracts";
+import { isChainConfigured } from "@/lib/contracts";
 import { useBuyPolicy } from "@/lib/hooks/useBuyPolicy";
-import { POLYGON_AMOY } from "@/lib/polygon";
+import { getExplorerUrl } from "@/lib/chains";
 import { NZ_CITIES, CITY_RADIUS_KM } from "@/lib/cities";
 import { SCALE } from "@/types";
 
@@ -153,6 +153,8 @@ function BuyPolicyForm() {
   }, [initialCity]);
 
   const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const chainConfigured = isChainConfigured(chainId);
   const { openConnectModal } = useConnectModal();
   const { buyPolicy, step, error, isPending, buyTxHash, reset } = useBuyPolicy();
 
@@ -184,7 +186,7 @@ function BuyPolicyForm() {
     return null;
   }, [coverageNum, magnitudeNum, radiusNum, lat, lng]);
 
-  const canSubmit = isConnected && CONTRACTS_CONFIGURED && !validation && !isPending;
+  const canSubmit = isConnected && chainConfigured && !validation && !isPending;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -197,135 +199,129 @@ function BuyPolicyForm() {
     }).catch(() => {});
   };
 
-  if (step === "done") {
-    return (
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <Link href="/dashboard" className="text-sm text-ink-500 hover:text-ink-700 mb-6 inline-flex items-center gap-1">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Dashboard
-        </Link>
-        <div className="bg-white rounded-xl shadow-sm border border-ink-200 p-8 text-center mt-4">
-          <div className="w-14 h-14 bg-shield-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-shield-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-ink-900 mb-2">Policy purchased</h2>
-          <p className="text-ink-600 mb-6">You&rsquo;re covered. Payout is automatic if the trigger fires.</p>
-          {buyTxHash && (
-            <a
-              href={`${POLYGON_AMOY.blockExplorers.default.url}/tx/${buyTxHash}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sm font-medium text-shield-600 hover:text-shield-700 block mb-6"
-            >
-              View on Polygonscan →
-            </a>
-          )}
-          <div className="flex gap-3 justify-center">
-            <Link href="/dashboard" className="bg-shield-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-shield-700 transition-colors">
-              Dashboard
-            </Link>
-            <button onClick={reset} type="button" className="bg-ink-100 text-ink-700 px-6 py-2 rounded-lg font-semibold hover:bg-ink-200 transition-colors">
-              Buy Another
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <Link href="/dashboard" className="text-sm text-ink-500 hover:text-ink-700 mb-6 inline-flex items-center gap-1">
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to Dashboard
-      </Link>
+    <div className="min-h-screen bg-ink-50">
+      <Header />
 
-      <div className="grid lg:grid-cols-5 gap-8 mt-4">
-        {/* Left: Form */}
-        <div className="lg:col-span-2">
-          <h1 className="text-2xl font-bold text-ink-900 mb-1">Buy Earthquake Policy</h1>
-          <p className="text-ink-500 text-sm mb-6">Set your trigger and coverage.</p>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-3xl font-bold text-ink-900 mb-2">Buy Earthquake Policy</h1>
+        <p className="text-ink-600 mb-8">Set your trigger conditions and coverage amount.</p>
 
-          {!CONTRACTS_CONFIGURED && (
-            <div className="bg-quake-50 border border-quake-200 text-quake-800 rounded-xl p-4 mb-6 text-sm">
-              Contracts aren&rsquo;t deployed yet. Set addresses in <code>.env.local</code>.
+        {!chainConfigured && (
+          <div className="bg-quake-50 border border-quake-200 text-quake-800 rounded-xl p-4 mb-6 text-sm">
+            QuakeShield isn&rsquo;t deployed on this network, so purchases are disabled. Switch networks in
+            your wallet, or set the contract addresses in the root <code>.env</code> to enable buying.
+          </div>
+        )}
+
+        {step === "done" ? (
+          <div className="max-w-xl mx-auto bg-white rounded-xl shadow-sm border border-ink-100 p-8 text-center">
+            <div className="w-16 h-16 bg-shield-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-shield-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-          )}
-
-          <form
-            className="space-y-5"
-            onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
-          >
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-medium text-ink-700 mb-1.5">Coverage Center</label>
-              <select
-                value={regionIndex}
-                onChange={(e) => setRegionIndex(Number(e.target.value))}
-                className="w-full border border-ink-200 rounded-lg px-3 py-2.5 text-sm text-ink-900 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+            <h2 className="text-xl font-semibold text-ink-900 mb-2">Policy purchased</h2>
+            <p className="text-ink-600 mb-6">You&rsquo;re covered. You&rsquo;ll be paid automatically if the trigger fires.</p>
+            {buyTxHash && (
+              <a
+                href={`${getExplorerUrl(chainId)}/tx/${buyTxHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-medium text-shield-600 hover:text-shield-700 block mb-6"
               >
-                {REGIONS.map((r, i) => (
-                  <option key={r.label} value={i}>{r.label}</option>
-                ))}
-              </select>
-              {isCustom && (
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div>
-                    <label className="block text-xs font-medium text-ink-500 mb-1">Latitude</label>
-                    <input
-                      type="number"
-                      step="0.0001"
-                      value={customLat}
-                      onChange={(e) => setCustomLat(e.target.value)}
-                      className="w-full border border-ink-200 rounded-lg px-3 py-2.5 text-sm text-ink-900 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-ink-500 mb-1">Longitude</label>
-                    <input
-                      type="number"
-                      step="0.0001"
-                      value={customLng}
-                      onChange={(e) => setCustomLng(e.target.value)}
-                      className="w-full border border-ink-200 rounded-lg px-3 py-2.5 text-sm text-ink-900 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-                    />
-                  </div>
-                </div>
-              )}
+                View transaction on the block explorer →
+              </a>
+            )}
+            <div className="flex gap-3 justify-center">
+              <Link href="/dashboard" className="bg-shield-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-shield-700 transition-colors">
+                Go to Dashboard
+              </Link>
+              <button
+                onClick={reset}
+                type="button"
+                className="bg-ink-100 text-ink-700 px-6 py-2 rounded-lg font-semibold hover:bg-ink-200 transition-colors"
+              >
+                Buy Another Policy
+              </button>
             </div>
+          </div>
+        ) : (
+          <div className="grid lg:grid-cols-5 gap-8">
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-ink-100 p-8 h-fit">
+            <form
+              className="space-y-6"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSubmit();
+              }}
+            >
+              {/* Coverage Amount */}
+              <div>
+                <label className="block text-sm font-medium text-ink-700 mb-2">Coverage Amount (USDC)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={coverage}
+                  onChange={(e) => setCoverage(e.target.value)}
+                  className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+                />
+                <p className="text-sm text-ink-500 mt-1">Premium: 1% of coverage (paid in USDC)</p>
+              </div>
 
-            {/* Trigger Magnitude */}
-            <div>
-              <label className="block text-sm font-medium text-ink-700 mb-1.5">Trigger Magnitude</label>
-              <input
-                type="number"
-                step="0.1"
-                min={4}
-                value={magnitude}
-                onChange={(e) => setMagnitude(e.target.value)}
-                className="w-full border border-ink-200 rounded-lg px-3 py-2.5 text-sm text-ink-900 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-              />
-              <p className="text-xs text-ink-500 mt-1">Min 4.0 — payout triggers at or above this</p>
-            </div>
+              {/* Trigger Magnitude */}
+              <div>
+                <label className="block text-sm font-medium text-ink-700 mb-2">Minimum Trigger Magnitude</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min={4}
+                  value={magnitude}
+                  onChange={(e) => setMagnitude(e.target.value)}
+                  className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+                />
+                <p className="text-sm text-ink-500 mt-1">Payout triggers when earthquake magnitude meets or exceeds this value (min 4.0)</p>
+              </div>
 
-            {/* Coverage + Premium */}
-            <div>
-              <label className="block text-sm font-medium text-ink-700 mb-1.5">Coverage (USDC)</label>
-              <input
-                type="number"
-                min={0}
-                value={coverage}
-                onChange={(e) => setCoverage(e.target.value)}
-                className="w-full border border-ink-200 rounded-lg px-3 py-2.5 text-sm text-ink-900 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
-              />
-              <p className="text-xs text-ink-500 mt-1">Premium: <span className="font-medium text-ink-700">{premium.toLocaleString()} USDC</span> (1%)</p>
-            </div>
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-medium text-ink-700 mb-2">Coverage Center</label>
+                <select
+                  value={regionIndex}
+                  onChange={(e) => setRegionIndex(Number(e.target.value))}
+                  className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500 mb-3"
+                >
+                  {REGIONS.map((r, i) => (
+                    <option key={r.label} value={i}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+                {isCustom && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-ink-500 mb-1">Latitude</label>
+                      <input
+                        type="number"
+                        step="0.0001"
+                        value={customLat}
+                        onChange={(e) => setCustomLat(e.target.value)}
+                        className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-ink-500 mb-1">Longitude</label>
+                      <input
+                        type="number"
+                        step="0.0001"
+                        value={customLng}
+                        onChange={(e) => setCustomLng(e.target.value)}
+                        className="w-full border border-ink-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-shield-500 focus:border-shield-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
 
             {/* Radius */}
             <div>
@@ -390,10 +386,12 @@ function BuyPolicyForm() {
             </h2>
             <p className="text-ink-500 text-sm">Live seismic data for this area</p>
           </div>
-          <CityMiniGraph cityId={selectedCityId} />
-        </div>
-      </div>
-    </main>
+            <CityMiniGraph cityId={selectedCityId} />
+          </div>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
 
