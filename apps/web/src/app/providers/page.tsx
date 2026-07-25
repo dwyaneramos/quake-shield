@@ -13,13 +13,14 @@ import {
 import { usePoolStats } from "@/lib/hooks/useQuakeShield";
 import { getExplorerUrl } from "@/lib/chains";
 import { SCALE } from "@/types";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function ProvidersPage() {
   const { isConnected } = useAccount();
   const chainId = useChainId();
   const chainConfigured = isChainConfigured(chainId);
-  const { stats } = usePoolStats();
-  const { position } = useMyPosition();
+  const { stats, isLoading: statsLoading } = usePoolStats();
+  const { position, isLoading: positionLoading } = useMyPosition();
   const {
     deposit,
     step: depositStep,
@@ -101,6 +102,7 @@ export default function ProvidersPage() {
                   ? `${SCALE.fromDNZD(stats.balance).toLocaleString()} DNZD`
                   : "--"
               }
+              isLoading={statsLoading}
             />
             <StatCard
               label="Active Coverage"
@@ -111,14 +113,17 @@ export default function ProvidersPage() {
                     ).toLocaleString()} DNZD`
                   : "--"
               }
+              isLoading={statsLoading}
             />
             <StatCard
               label="Reserve Ratio"
               value={utilization !== null ? `${utilization.toFixed(0)}%` : "∞"}
+              isLoading={statsLoading}
             />
             <StatCard
               label="Total Shares"
               value={stats ? stats.totalShares.toLocaleString() : "0"}
+              isLoading={statsLoading}
             />
           </div>
           {utilization !== null && (
@@ -162,19 +167,27 @@ export default function ProvidersPage() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-ink-50 rounded-lg">
                   <span className="text-ink-600">Your Shares</span>
-                  <span className="font-bold text-ink-900">
-                    {position ? position.shares.toLocaleString() : "0"}
-                  </span>
+                  {positionLoading ? (
+                    <Skeleton className="h-5 w-16" />
+                  ) : (
+                    <span className="font-bold text-ink-900">
+                      {position ? position.shares.toLocaleString() : "0"}
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center p-4 bg-ink-50 rounded-lg">
                   <span className="text-ink-600">Current Value</span>
-                  <span className="font-bold text-ink-900">
-                    {position
-                      ? `${SCALE.fromDNZD(
-                          position.currentValue,
-                        ).toLocaleString()} DNZD`
-                      : "0 DNZD"}
-                  </span>
+                  {positionLoading ? (
+                    <Skeleton className="h-5 w-24" />
+                  ) : (
+                    <span className="font-bold text-ink-900">
+                      {position
+                        ? `${SCALE.fromDNZD(
+                            position.currentValue,
+                          ).toLocaleString()} DNZD`
+                        : "0 DNZD"}
+                    </span>
+                  )}
                 </div>
                 {position && position.shares > 0n && (
                   <div className="flex justify-between items-center p-4 bg-shield-50 rounded-lg">
@@ -344,10 +357,22 @@ export default function ProvidersPage() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({
+  label,
+  value,
+  isLoading,
+}: {
+  label: string;
+  value: string;
+  isLoading?: boolean;
+}) {
   return (
     <div className="text-center p-4 bg-ink-50 rounded-lg">
-      <div className="text-2xl font-bold text-ink-900">{value}</div>
+      {isLoading ? (
+        <Skeleton className="h-8 w-20 mx-auto" />
+      ) : (
+        <div className="text-2xl font-bold text-ink-900">{value}</div>
+      )}
       <div className="text-sm text-ink-600 mt-1">{label}</div>
     </div>
   );
